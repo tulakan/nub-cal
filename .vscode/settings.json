@@ -1,0 +1,49 @@
+{
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "editor.formatOnType": false,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit",
+        "source.fixAll.eslint": "explicit"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true
+    },
+    "[json]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true
+    },
+    "[html]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true
+    },
+    "[scss]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true
+    },
+    "[css]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true
+    },
+    "typescript.preferences.includePackageJsonAutoImports": "on",
+    "prettier.requireConfig": true,
+    "prettier.useEditorConfig": false,
+    "emmet.includeLanguages": {
+        "typescript": "html"
+    },
+    "files.associations": {
+        "*.component.html": "html",
+        "*.component.scss": "scss"
+    },
+    "html.format.enable": false,
+    "css.format.enable": false,
+    "scss.format.enable": false,
+    "typescript.format.enable": false,
+    "javascript.format.enable": false
+}
