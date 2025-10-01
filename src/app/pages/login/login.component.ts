@@ -1,20 +1,116 @@
-import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { MaterialModule } from '../../shared/modules/material.module';
+import { ApiService } from '../../shared/services/api.service';
+import { StoreService } from '../../stores/store.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [],
+  imports: [MaterialModule, ReactiveFormsModule, CommonModule],
   template: `
-    <p>
-      login works!
-    </p>
+    <div class="full-page-container">
+      <mat-card class="login-card">
+        <div class="app-title">NUB R HAN</div>
+        <form
+          class="login-form"
+          [formGroup]="loginForm"
+          (ngSubmit)="onSubmit()"
+        >
+          <mat-form-field appearance="outline" class="form-field username">
+            <mat-label>Username</mat-label>
+            <input
+              matInput
+              placeholder="Enter your username"
+              formControlName="username"
+            />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="form-field password">
+            <mat-label>Password</mat-label>
+            <input
+              matInput
+              type="password"
+              placeholder="Enter your password"
+              formControlName="password"
+            />
+          </mat-form-field>
+          <button mat-raised-button color="primary" class="full-width">
+            Login
+          </button>
+        </form>
+      </mat-card>
+    </div>
   `,
-  styles: ``
+  styles: `
+    .full-page-container {
+      width: 100%;
+      height: 100%;
+      margin: 0 auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: var(--bg-gradient);
+    }
+
+    .login-card {
+      width: 400px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .login-form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .form-field {
+      width: 100%;
+    }
+    .app-title {
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+  `,
 })
 export class LoginPage {
+  store = inject(StoreService);
+  service = inject(ApiService);
+  formBuilder = inject(FormBuilder);
 
   constructor() {
     console.log('LoginPage loaded');
   }
 
+  loginForm = this.formBuilder.group({
+    username: [''],
+    password: [''],
+  });
+
+  onSubmit() {
+    const formValue = this.loginForm.value;
+    console.log('Form submitted:', formValue);
+
+    const username = formValue.username;
+    const password = formValue.password;
+
+    const canAccess = username === 'kk_tula' && password === 'kk_0912345678';
+    if (canAccess) {
+      this.store.auth.setLoginState(true);
+      this.service.nav.toMainPage();
+      return;
+    } else {
+      alert('Invalid username or password');
+    }
+
+    // Add your authentication logic here
+  }
 }

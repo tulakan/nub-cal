@@ -23,7 +23,7 @@ export const routes: Routes = [
       },
       {
         path: '',
-        redirectTo: 'theme-demo',
+        redirectTo: 'food-log',
         pathMatch: 'full',
       },
     ],
