@@ -18,12 +18,12 @@ import { StoreService } from '../../stores/store.service';
           [formGroup]="loginForm"
           (ngSubmit)="onSubmit()"
         >
-          <mat-form-field appearance="outline" class="form-field username">
-            <mat-label>Username</mat-label>
+          <mat-form-field appearance="outline" class="form-field email">
+            <mat-label>Email</mat-label>
             <input
               matInput
-              placeholder="Enter your username"
-              formControlName="username"
+              placeholder="Enter your email"
+              formControlName="email"
             />
           </mat-form-field>
           <mat-form-field appearance="outline" class="form-field password">
@@ -86,12 +86,10 @@ export class LoginPage {
   service = inject(ApiService);
   formBuilder = inject(FormBuilder);
 
-  constructor() {
-    console.log('LoginPage loaded');
-  }
+  constructor() {}
 
   loginForm = this.formBuilder.group({
-    username: [''],
+    email: [''],
     password: [''],
   });
 
@@ -99,18 +97,10 @@ export class LoginPage {
     const formValue = this.loginForm.value;
     console.log('Form submitted:', formValue);
 
-    const username = formValue.username;
+    const email = formValue.email;
     const password = formValue.password;
-
-    const canAccess = username === 'kk_tula' && password === 'kk_0912345678';
-    if (canAccess) {
-      this.store.auth.setLoginState(true);
-      this.service.nav.toMainPage();
-      return;
-    } else {
-      alert('Invalid username or password');
+    if (email && password) {
+      this.store.auth.login(email, password);
     }
-
-    // Add your authentication logic here
   }
 }

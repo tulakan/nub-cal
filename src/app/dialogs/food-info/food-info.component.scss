@@ -1,0 +1,290 @@
+// .food-info-dialog {
+//   width: 100%;
+//   max-width: 450px;
+//   min-width: 400px;
+
+//   ::ng-deep .mat-mdc-dialog-title {
+//     display: flex;
+//     align-items: center;
+//     gap: 8px;
+//     margin-bottom: 16px;
+
+//     mat-icon {
+//       color: var(--mat-primary-color, #1976d2);
+//     }
+//   }
+
+//   ::ng-deep .mat-mdc-dialog-content {
+//     padding: 0 24px;
+//     margin: 0;
+//     max-height: 70vh;
+//     overflow-y: auto;
+//   }
+
+//   ::ng-deep .mat-mdc-dialog-actions {
+//     padding: 16px 24px;
+//     margin: 0;
+//     gap: 8px;
+//   }
+
+.food-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 0;
+
+  .full-width {
+    width: 100%;
+
+    // Additional spacing for fields with prefix icons
+    &.mat-mdc-form-field-has-icon-prefix {
+      ::ng-deep .mat-mdc-form-field-infix {
+        padding-left: 40px !important;
+      }
+
+      ::ng-deep input {
+        padding-left: 0 !important;
+      }
+    }
+  }
+
+  .form-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+
+    .serving-size {
+      flex: 2;
+    }
+
+    .unit {
+      flex: 1;
+    }
+  }
+
+  mat-divider {
+    margin: 8px 0;
+  }
+
+  .macros-section {
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 16px 0 12px 0;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--mat-primary-color, #1976d2);
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .macros-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      .macro-field {
+        width: 100%;
+      }
+    }
+
+    .calculated-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 12px;
+      background-color: var(--mat-app-surface-variant, #f5f5f5);
+      border-radius: 6px;
+      font-size: 14px;
+      color: var(--mat-app-on-surface-variant, #666);
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: var(--mat-primary-color, #1976d2);
+      }
+
+      .difference {
+        font-weight: 500;
+        color: var(--mat-warn-color, #f44336);
+      }
+    }
+  }
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .food-info-dialog {
+    max-width: 95vw;
+    min-width: 320px;
+
+    ::ng-deep .mat-mdc-dialog-content {
+      padding: 0 16px;
+      max-height: 60vh;
+    }
+
+    ::ng-deep .mat-mdc-dialog-actions {
+      padding: 16px;
+      flex-direction: column-reverse;
+
+      button {
+        width: 100%;
+        margin: 0;
+
+        &:not(:last-child) {
+          margin-top: 8px;
+        }
+      }
+    }
+
+    .food-form {
+      .form-row {
+        flex-direction: column;
+        gap: 12px;
+
+        .serving-size,
+        .unit {
+          flex: 1;
+        }
+      }
+
+      .macros-section {
+        .macros-grid {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+      }
+    }
+  }
+}
+
+// Form field styling enhancements
+::ng-deep .mat-mdc-form-field {
+  .mat-mdc-text-field-wrapper {
+    .mat-mdc-form-field-flex {
+      .mat-mdc-form-field-icon-prefix {
+        mat-icon {
+          color: var(--mat-primary-color, #1976d2);
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+          margin-right: 8px;
+        }
+      }
+
+      .mat-mdc-form-field-icon-suffix {
+        mat-icon {
+          color: var(--mat-primary-color, #1976d2);
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+          margin-left: 8px;
+        }
+      }
+
+      // Add proper spacing for prefix icons
+      &.mat-mdc-form-field-has-icon-prefix {
+        .mat-mdc-form-field-infix {
+          padding-left: 32px;
+        }
+      }
+
+      // Input and placeholder positioning
+      .mat-mdc-form-field-infix {
+        input {
+          &::placeholder {
+            padding-left: 0;
+          }
+        }
+      }
+    }
+  }
+
+  &.mat-form-field-appearance-outline {
+    .mat-mdc-form-field-outline {
+      border-radius: 8px;
+    }
+
+    .mat-mdc-form-field-subscript-wrapper {
+      .mat-mdc-form-field-hint-wrapper {
+        .mat-mdc-form-field-hint {
+          color: var(--mat-app-on-surface-variant, #666);
+        }
+      }
+    }
+
+    // Specific spacing for outlined fields with prefix
+    &.mat-mdc-form-field-has-icon-prefix {
+      .mat-mdc-text-field-wrapper {
+        .mat-mdc-form-field-flex {
+          .mat-mdc-form-field-infix {
+            padding-left: 36px;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Custom spacing fix for prefix icons
+.food-form {
+  ::ng-deep .mat-mdc-form-field-appearance-outline {
+    &.mat-mdc-form-field-has-icon-prefix {
+      .mat-mdc-text-field-wrapper {
+        .mat-mdc-form-field-flex {
+          .mat-mdc-form-field-icon-prefix {
+            position: absolute;
+            left: 12px;
+            z-index: 1;
+          }
+
+          .mat-mdc-form-field-infix {
+            padding-left: 48px !important;
+
+            input {
+              padding-left: 0 !important;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Macro field color coding
+.macros-grid {
+  .macro-field {
+    &:nth-child(1) {
+      // Protein - Red
+      ::ng-deep .mat-mdc-form-field-focus-overlay {
+        background-color: rgba(255, 87, 34, 0.04);
+      }
+    }
+
+    &:nth-child(2) {
+      // Carbs - Orange
+      ::ng-deep .mat-mdc-form-field-focus-overlay {
+        background-color: rgba(255, 152, 0, 0.04);
+      }
+    }
+
+    &:nth-child(3) {
+      // Fat - Purple
+      ::ng-deep .mat-mdc-form-field-focus-overlay {
+        background-color: rgba(156, 39, 176, 0.04);
+      }
+    }
+  }
+}
+
+.dialog-title {
+  font-size: 18px;
+  font-weight: 500;
+}

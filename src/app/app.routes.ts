@@ -14,7 +14,16 @@ export const routes: Routes = [
       {
         path: 'food-log',
         loadComponent: () =>
-          import('./pages/food/food-log.component').then(m => m.FoodLogPage),
+          import('./pages/food-log/food-log.component').then(
+            m => m.FoodLogPage
+          ),
+      },
+      {
+        path: 'food-list',
+        loadComponent: () =>
+          import('./pages/food-list/food-list.component').then(
+            m => m.FoodListComponent
+          ),
       },
       {
         path: 'theme-demo',

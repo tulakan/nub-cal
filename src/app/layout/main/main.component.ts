@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, inject } from '@angular/core';
+import { Router, RouterOutlet } from '@angular/router';
 import { MaterialModule } from '../../shared/modules/material.module';
 import { ThemeService } from '../../shared/services/theme.service';
 
@@ -31,17 +31,22 @@ import { ThemeService } from '../../shared/services/theme.service';
       </div>
       <div class="footer bg-surface">
         <nav class="bottom-nav">
-          <!-- <button mat-icon-button color="primary">
+          <button
+            mat-icon-button
+            (click)="navigateToFoodLog()"
+            matTooltip="Food Log"
+          >
             <mat-icon>restaurant</mat-icon>
           </button>
-          <button mat-icon-button>
-            <mat-icon>fitness_center</mat-icon>
+          <button
+            mat-icon-button
+            (click)="navigateToFoodList()"
+            matTooltip="Food List"
+          >
+            <mat-icon>list_alt</mat-icon>
           </button>
-          <button mat-icon-button>
+          <button mat-icon-button matTooltip="Body Composition">
             <mat-icon>monitor_weight</mat-icon>
-          </button> -->
-          <button mat-icon-button>
-            <mat-icon>egg_alt</mat-icon>
           </button>
         </nav>
       </div>
@@ -70,7 +75,7 @@ import { ThemeService } from '../../shared/services/theme.service';
       flex-grow: 1;
       width: 100%;
       padding: 8px;
-      // overflow-y: auto;
+      overflow-y: scroll;
     }
 
     .footer {
@@ -92,9 +97,19 @@ import { ThemeService } from '../../shared/services/theme.service';
   `,
 })
 export class MainComponent {
+  private router = inject(Router);
+
   constructor(public themeService: ThemeService) {}
 
   toggleTheme(): void {
     this.themeService.toggleTheme();
+  }
+
+  navigateToFoodLog(): void {
+    this.router.navigate(['/food-log']);
+  }
+
+  navigateToFoodList(): void {
+    this.router.navigate(['/food-list']);
   }
 }

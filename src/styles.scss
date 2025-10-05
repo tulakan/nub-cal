@@ -3,13 +3,16 @@
 // Import Angular Material theming functions FIRST
 @use "@angular/material" as mat;
 
-// Tailwind CSS directives
-// @tailwind base;
-// @tailwind components;
-// @tailwind utilities;
-
-// Include the common styles for Angular Material
+// Include the common styles for Angular Material FIRST
 @include mat.core();
+
+// Tailwind CSS directives - preflight disabled to avoid Angular Material conflicts
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// Since we disabled preflight, Angular Material should work normally
+// Add only minimal custom styles if needed
 
 // Use custom color palette with the new colors
 $custom-primary-palette: (
@@ -113,4 +116,8 @@ body {
 
 * {
   box-sizing: border-box !important;
+}
+
+.spacer {
+  flex-grow: 1;
 }

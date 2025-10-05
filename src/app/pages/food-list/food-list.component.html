@@ -1,0 +1,245 @@
+<div class="food-list-container">
+  <mat-card class="food-list-card">
+    <mat-card-content>
+      <div class="search-container">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Search foods...</mat-label>
+          <input
+            matInput
+            [(ngModel)]="searchTerm"
+            (input)="onSearchChange()"
+            placeholder="Search by name, calories, macros..."
+          />
+          <!-- <mat-icon matPrefix>search</mat-icon> -->
+          <button
+            mat-icon-button
+            matSuffix
+            *ngIf="searchTerm"
+            (click)="clearSearch()"
+            matTooltip="Clear search"
+            type="button"
+          >
+            <mat-icon>clear</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <span class="spacer"></span>
+
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="addFood()"
+          class="add-food-btn"
+        >
+          <mat-icon>add</mat-icon>
+          Add Food
+        </button>
+        <button
+          mat-icon-button
+          color="primary"
+          (click)="loadFoods()"
+          matTooltip="Refresh"
+        >
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+
+      <div class="table-container" *ngIf="!isLoading; else loadingTemplate">
+        <!-- Desktop Table View -->
+        <div class="desktop-view">
+          <mat-table [dataSource]="filteredData" class="food-table">
+            <!-- Food Name Column -->
+            <ng-container matColumnDef="name">
+              <mat-header-cell *matHeaderCellDef class="header-cell"
+                >Food Name</mat-header-cell
+              >
+              <mat-cell *matCellDef="let food" class="name-cell">
+                <strong>{{ food.name }}</strong>
+              </mat-cell>
+            </ng-container>
+
+            <!-- Calories Column -->
+            <ng-container matColumnDef="kcal">
+              <mat-header-cell *matHeaderCellDef class="header-cell"
+                >Calories</mat-header-cell
+              >
+              <mat-cell *matCellDef="let food" class="numeric-cell">
+                {{ food.kcal }} kcal
+              </mat-cell>
+            </ng-container>
+
+            <!-- Serving Size + Unit Column -->
+            <ng-container matColumnDef="servingSizeUnit">
+              <mat-header-cell *matHeaderCellDef class="header-cell"
+                >Serving Size</mat-header-cell
+              >
+              <mat-cell *matCellDef="let food" class="numeric-cell">
+                {{ getServingSizeWithUnit(food) }}
+              </mat-cell>
+            </ng-container>
+
+            <!-- Protein Column -->
+            <ng-container matColumnDef="protein">
+              <mat-header-cell *matHeaderCellDef class="header-cell"
+                >Protein</mat-header-cell
+              >
+              <mat-cell
+                *matCellDef="let food"
+                class="numeric-cell protein-cell"
+              >
+                {{ food.protein }}g
+              </mat-cell>
+            </ng-container>
+
+            <!-- Carbs Column -->
+            <ng-container matColumnDef="carb">
+              <mat-header-cell *matHeaderCellDef class="header-cell"
+                >Carbs</mat-header-cell
+              >
+              <mat-cell *matCellDef="let food" class="numeric-cell carb-cell">
+                {{ food.carb }}g
+              </mat-cell>
+            </ng-container>
+
+            <!-- Fat Column -->
+            <ng-container matColumnDef="fat">
+              <mat-header-cell *matHeaderCellDef class="header-cell"
+                >Fat</mat-header-cell
+              >
+              <mat-cell *matCellDef="let food" class="numeric-cell fat-cell">
+                {{ food.fat }}g
+              </mat-cell>
+            </ng-container>
+
+            <!-- Actions Column -->
+            <ng-container matColumnDef="actions">
+              <mat-header-cell *matHeaderCellDef class="header-cell"
+                >Actions</mat-header-cell
+              >
+              <mat-cell *matCellDef="let food" class="action-cell">
+                <button
+                  mat-icon-button
+                  color="primary"
+                  (click)="editFood(food)"
+                  matTooltip="Edit food"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="deleteFood(food)"
+                  matTooltip="Delete food"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </mat-cell>
+            </ng-container>
+
+            <mat-header-row
+              *matHeaderRowDef="displayedColumns"
+            ></mat-header-row>
+            <mat-row
+              *matRowDef="let row; columns: displayedColumns"
+              class="food-row"
+            ></mat-row>
+          </mat-table>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div class="mobile-view">
+          <div class="food-card" *ngFor="let food of filteredData">
+            <div class="food-card-header">
+              <h3 class="food-name">{{ food.name }}</h3>
+              <div class="food-actions">
+                <button
+                  mat-icon-button
+                  color="primary"
+                  (click)="editFood(food)"
+                  matTooltip="Edit food"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="deleteFood(food)"
+                  matTooltip="Delete food"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <div class="food-card-content">
+              <div class="food-info-row">
+                <div class="info-item calories">
+                  <mat-icon>local_fire_department</mat-icon>
+                  <span class="label">Calories</span>
+                  <span class="value">{{ food.kcal }} kcal</span>
+                </div>
+                <div class="info-item serving">
+                  <mat-icon>straighten</mat-icon>
+                  <span class="label">Serving</span>
+                  <span class="value">{{ getServingSizeWithUnit(food) }}</span>
+                </div>
+              </div>
+
+              <div class="macros-row">
+                <div class="macro-item protein">
+                  <span class="macro-label">Protein</span>
+                  <span class="macro-value">{{ food.protein }}g</span>
+                </div>
+                <div class="macro-item carbs">
+                  <span class="macro-label">Carbs</span>
+                  <span class="macro-value">{{ food.carb }}g</span>
+                </div>
+                <div class="macro-item fat">
+                  <span class="macro-label">Fat</span>
+                  <span class="macro-value">{{ food.fat }}g</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="no-data" *ngIf="filteredData.length === 0 && !isLoading">
+          <div
+            class="no-search-results"
+            *ngIf="searchTerm; else noDataTemplate"
+          >
+            <mat-icon>search_off</mat-icon>
+            <h3>No foods found</h3>
+            <p>
+              No foods match "{{ searchTerm }}". Try a different search term or
+              add a new food.
+            </p>
+          </div>
+
+          <ng-template #noDataTemplate>
+            <mat-icon>info</mat-icon>
+            <p>No foods available. Add your first food to get started!</p>
+          </ng-template>
+        </div>
+      </div>
+
+      <ng-template #loadingTemplate>
+        <div class="loading-container">
+          <mat-spinner diameter="50"></mat-spinner>
+          <p>Loading foods...</p>
+        </div>
+      </ng-template>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Floating Action Button for Mobile -->
+  <button
+    mat-fab
+    color="primary"
+    class="fab-add-food"
+    (click)="addFood()"
+    matTooltip="Add Food"
+  >
+    <mat-icon>add</mat-icon>
+  </button>
+</div>
