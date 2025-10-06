@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './shared/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -26,17 +27,24 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'theme-demo',
+        path: 'body-composition',
         loadComponent: () =>
-          import('./theme-demo.component').then(m => m.ThemeDemoComponent),
+          import('./pages/body-composition/body-composition.page').then(
+            m => m.BodyCompositionPage
+          ),
       },
+      // {
+      //   path: 'theme-demo',
+      //   loadComponent: () =>
+      //     import('./theme-demo.component').then(m => m.ThemeDemoComponent),
+      // },
       {
         path: '',
         redirectTo: 'food-log',
         pathMatch: 'full',
       },
     ],
-    canActivate: [],
+    canActivate: [authGuard],
   },
 
   // {

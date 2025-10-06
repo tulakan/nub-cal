@@ -45,7 +45,11 @@ import { ThemeService } from '../../shared/services/theme.service';
           >
             <mat-icon>list_alt</mat-icon>
           </button>
-          <button mat-icon-button matTooltip="Body Composition">
+          <button
+            mat-icon-button
+            matTooltip="Body Composition"
+            (click)="navigateToBodyComposition()"
+          >
             <mat-icon>monitor_weight</mat-icon>
           </button>
         </nav>
@@ -111,5 +115,9 @@ export class MainComponent {
 
   navigateToFoodList(): void {
     this.router.navigate(['/food-list']);
+  }
+
+  navigateToBodyComposition(): void {
+    this.router.navigate(['/body-composition']);
   }
 }

@@ -1,0 +1,482 @@
+<div class="food-log-container">
+  <!-- Section 1: Target Macros -->
+  <mat-card class="target-section">
+    <mat-card-header>
+      <mat-card-title>Daily Targets</mat-card-title>
+      <mat-card-subtitle>Set your daily nutrition goals</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="targetForm" class="target-form">
+        <div class="target-grid">
+          <div class="target-field">
+            <label class="field-label">Calories</label>
+            <mat-form-field appearance="outline" class="compact-field">
+              <input
+                matInput
+                type="number"
+                formControlName="kcal"
+                placeholder="kcal"
+              />
+            </mat-form-field>
+          </div>
+
+          <div class="target-field">
+            <label class="field-label">Protein</label>
+            <mat-form-field appearance="outline" class="compact-field">
+              <input
+                matInput
+                type="number"
+                formControlName="protein"
+                placeholder="grams"
+              />
+            </mat-form-field>
+          </div>
+
+          <div class="target-field">
+            <label class="field-label">Carbs</label>
+            <mat-form-field appearance="outline" class="compact-field">
+              <input
+                matInput
+                type="number"
+                formControlName="carb"
+                placeholder="grams"
+              />
+            </mat-form-field>
+          </div>
+
+          <div class="target-field">
+            <label class="field-label">Fat</label>
+            <mat-form-field appearance="outline" class="compact-field">
+              <input
+                matInput
+                type="number"
+                formControlName="fat"
+                placeholder="grams"
+              />
+            </mat-form-field>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="updateTargets()"
+            [disabled]="targetForm.invalid"
+          >
+            Update Targets
+          </button>
+          <button
+            mat-stroked-button
+            color="warn"
+            (click)="resetTargetMacros()"
+            matTooltip="Reset to default targets"
+          >
+            <mat-icon>restore</mat-icon>
+            Reset Targets
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Section 2: Add Food Form -->
+  <mat-card class="add-food-section">
+    <mat-card-header>
+      <mat-card-title>Add Food</mat-card-title>
+      <mat-card-subtitle>Search and add foods to your log</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="foodSearchForm" class="food-search-form">
+        <div class="search-grid">
+          <mat-form-field appearance="outline" class="food-search">
+            <mat-label>Search Food</mat-label>
+            <input
+              type="text"
+              matInput
+              formControlName="selectedFood"
+              [matAutocomplete]="auto"
+              placeholder="Type to search foods..."
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+            <mat-autocomplete
+              #auto="matAutocomplete"
+              [displayWith]="displayFoodName"
+              class="food-autocomplete"
+              [panelWidth]="'auto'"
+              autoActiveFirstOption
+            >
+              <mat-option
+                *ngFor="let food of filteredOptions | async"
+                [value]="food"
+                class="food-option"
+              >
+                <div class="food-option-content">
+                  <div class="food-name">{{ food.name }}</div>
+                  <div class="food-info">
+                    {{ food.kcal }}kcal, {{ food.protein }}g protein per
+                    {{ food.servingSize }}{{ food.unit }}
+                  </div>
+                </div>
+              </mat-option>
+            </mat-autocomplete>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="serving-size">
+            <mat-label>Serving Size</mat-label>
+            <input
+              matInput
+              type="number"
+              formControlName="servingSize"
+              step="0.1"
+              min="0.1"
+            />
+            <span matSuffix *ngIf="foodSearchForm.get('selectedFood')?.value">
+              {{ foodSearchForm.get('selectedFood')?.value?.unit }}
+            </span>
+          </mat-form-field>
+        </div>
+
+        <!-- Nutrition Preview -->
+        <div
+          class="nutrition-preview"
+          *ngIf="
+            foodSearchForm.get('selectedFood')?.value &&
+            foodSearchForm.get('servingSize')?.value > 0
+          "
+        >
+          <h4>Nutrition Preview:</h4>
+          <div class="preview-grid">
+            <div class="nutrition-item">
+              <span class="label">Calories:</span>
+              <span class="value">
+                {{
+                  foodSearchForm.get('selectedFood')?.value?.kcal *
+                    (foodSearchForm.get('servingSize')?.value /
+                      foodSearchForm.get('selectedFood')?.value?.servingSize)
+                    | number: '1.1-1'
+                }}kcal
+              </span>
+            </div>
+            <div class="nutrition-item">
+              <span class="label">Protein:</span>
+              <span class="value">
+                {{
+                  foodSearchForm.get('selectedFood')?.value?.protein *
+                    (foodSearchForm.get('servingSize')?.value /
+                      foodSearchForm.get('selectedFood')?.value?.servingSize)
+                    | number: '1.1-1'
+                }}g
+              </span>
+            </div>
+            <div class="nutrition-item">
+              <span class="label">Carbs:</span>
+              <span class="value">
+                {{
+                  foodSearchForm.get('selectedFood')?.value?.carb *
+                    (foodSearchForm.get('servingSize')?.value /
+                      foodSearchForm.get('selectedFood')?.value?.servingSize)
+                    | number: '1.1-1'
+                }}g
+              </span>
+            </div>
+            <div class="nutrition-item">
+              <span class="label">Fat:</span>
+              <span class="value">
+                {{
+                  foodSearchForm.get('selectedFood')?.value?.fat *
+                    (foodSearchForm.get('servingSize')?.value /
+                      foodSearchForm.get('selectedFood')?.value?.servingSize)
+                    | number: '1.1-1'
+                }}g
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button
+            mat-raised-button
+            color="accent"
+            (click)="addFood()"
+            [disabled]="foodSearchForm.invalid"
+          >
+            <mat-icon>add</mat-icon>
+            Add Food
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Section 3: Food Summary -->
+  <!-- Food Summary Section -->
+  <mat-card class="food-summary-section" *ngIf="loggedFoods().length > 0">
+    <mat-card-header>
+      <div class="card-header-content">
+        <div class="header-text">
+          <mat-card-title>Today's Food Log</mat-card-title>
+          <mat-card-subtitle>Foods you've consumed today</mat-card-subtitle>
+        </div>
+        <div class="header-actions">
+          <button
+            mat-icon-button
+            color="warn"
+            (click)="resetLoggedFoods()"
+            matTooltip="Clear all logged foods"
+          >
+            <mat-icon>clear_all</mat-icon>
+          </button>
+        </div>
+      </div>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="logged-foods">
+        <div
+          class="logged-food-item"
+          *ngFor="let loggedFood of loggedFoods(); let i = index"
+        >
+          <div class="food-details">
+            <h4 class="food-name">{{ loggedFood.food.name }}</h4>
+            <p class="serving-info">
+              {{ loggedFood.servingSize }}{{ loggedFood.food.unit }}
+              <span class="base-serving"
+                >(Base: {{ loggedFood.food.servingSize
+                }}{{ loggedFood.food.unit }})</span
+              >
+            </p>
+            <div class="nutrition-summary">
+              <span class="nutrition-badge calories"
+                >{{ loggedFood.calculatedNutrition.kcal }}kcal</span
+              >
+              <span class="nutrition-badge protein"
+                >{{ loggedFood.calculatedNutrition.protein }}g protein</span
+              >
+              <span class="nutrition-badge carbs"
+                >{{ loggedFood.calculatedNutrition.carb }}g carbs</span
+              >
+              <span class="nutrition-badge fat"
+                >{{ loggedFood.calculatedNutrition.fat }}g fat</span
+              >
+            </div>
+          </div>
+          <div class="food-actions">
+            <button
+              mat-icon-button
+              color="warn"
+              (click)="removeFood(i)"
+              matTooltip="Remove from log"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Summary -->
+      <div class="total-summary">
+        <h3>Total Consumed</h3>
+        <div class="total-grid">
+          <div class="total-item">
+            <span class="total-label">Calories:</span>
+            <span class="total-value"
+              >{{ totalConsumed().kcal | number: '1.1-1' }}kcal</span
+            >
+          </div>
+          <div class="total-item">
+            <span class="total-label">Protein:</span>
+            <span class="total-value"
+              >{{ totalConsumed().protein | number: '1.1-1' }}g</span
+            >
+          </div>
+          <div class="total-item">
+            <span class="total-label">Carbs:</span>
+            <span class="total-value"
+              >{{ totalConsumed().carb | number: '1.1-1' }}g</span
+            >
+          </div>
+          <div class="total-item">
+            <span class="total-label">Fat:</span>
+            <span class="total-value"
+              >{{ totalConsumed().fat | number: '1.1-1' }}g</span
+            >
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Section 4: Remaining Macros -->
+  <mat-card class="remaining-section">
+    <mat-card-header>
+      <mat-card-title>Progress & Remaining</mat-card-title>
+      <mat-card-subtitle>Track your daily nutrition goals</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="progress-grid">
+        <!-- Calories Progress -->
+        <div class="progress-item">
+          <div class="progress-header">
+            <span class="macro-name">Calories</span>
+            <span class="progress-text">
+              {{ totalConsumed().kcal | number: '1.0-0' }} /
+              {{ targetMacros().kcal }}kcal
+            </span>
+          </div>
+          <mat-progress-bar
+            [value]="
+              getProgressPercentage(totalConsumed().kcal, targetMacros().kcal)
+            "
+            [color]="getMacroStatus(totalConsumed().kcal, targetMacros().kcal)"
+          ></mat-progress-bar>
+          <div class="remaining-text">
+            <span
+              [class]="
+                remainingMacros().kcal >= 0
+                  ? 'remaining-positive'
+                  : 'remaining-negative'
+              "
+            >
+              {{ remainingMacros().kcal >= 0 ? 'Remaining: ' : 'Over by: ' }}
+              {{ Math.abs(remainingMacros().kcal) | number: '1.0-0' }}kcal
+            </span>
+          </div>
+        </div>
+
+        <!-- Protein Progress -->
+        <div class="progress-item">
+          <div class="progress-header">
+            <span class="macro-name">Protein</span>
+            <span class="progress-text">
+              {{ totalConsumed().protein | number: '1.1-1' }} /
+              {{ targetMacros().protein }}g
+            </span>
+          </div>
+          <mat-progress-bar
+            [value]="
+              getProgressPercentage(
+                totalConsumed().protein,
+                targetMacros().protein
+              )
+            "
+            [color]="
+              getMacroStatus(totalConsumed().protein, targetMacros().protein)
+            "
+          ></mat-progress-bar>
+          <div class="remaining-text">
+            <span
+              [class]="
+                remainingMacros().protein >= 0
+                  ? 'remaining-positive'
+                  : 'remaining-negative'
+              "
+            >
+              {{ remainingMacros().protein >= 0 ? 'Remaining: ' : 'Over by: ' }}
+              {{ Math.abs(remainingMacros().protein) | number: '1.1-1' }}g
+            </span>
+          </div>
+        </div>
+
+        <!-- Carbs Progress -->
+        <div class="progress-item">
+          <div class="progress-header">
+            <span class="macro-name">Carbs</span>
+            <span class="progress-text">
+              {{ totalConsumed().carb | number: '1.1-1' }} /
+              {{ targetMacros().carb }}g
+            </span>
+          </div>
+          <mat-progress-bar
+            [value]="
+              getProgressPercentage(totalConsumed().carb, targetMacros().carb)
+            "
+            [color]="getMacroStatus(totalConsumed().carb, targetMacros().carb)"
+          ></mat-progress-bar>
+          <div class="remaining-text">
+            <span
+              [class]="
+                remainingMacros().carb >= 0
+                  ? 'remaining-positive'
+                  : 'remaining-negative'
+              "
+            >
+              {{ remainingMacros().carb >= 0 ? 'Remaining: ' : 'Over by: ' }}
+              {{ Math.abs(remainingMacros().carb) | number: '1.1-1' }}g
+            </span>
+          </div>
+        </div>
+
+        <!-- Fat Progress -->
+        <div class="progress-item">
+          <div class="progress-header">
+            <span class="macro-name">Fat</span>
+            <span class="progress-text">
+              {{ totalConsumed().fat | number: '1.1-1' }} /
+              {{ targetMacros().fat }}g
+            </span>
+          </div>
+          <mat-progress-bar
+            [value]="
+              getProgressPercentage(totalConsumed().fat, targetMacros().fat)
+            "
+            [color]="getMacroStatus(totalConsumed().fat, targetMacros().fat)"
+          ></mat-progress-bar>
+          <div class="remaining-text">
+            <span
+              [class]="
+                remainingMacros().fat >= 0
+                  ? 'remaining-positive'
+                  : 'remaining-negative'
+              "
+            >
+              {{ remainingMacros().fat >= 0 ? 'Remaining: ' : 'Over by: ' }}
+              {{ Math.abs(remainingMacros().fat) | number: '1.1-1' }}g
+            </span>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Empty State -->
+  <mat-card class="empty-state" *ngIf="loggedFoods().length === 0">
+    <mat-card-content>
+      <div class="empty-content">
+        <mat-icon class="empty-icon">restaurant</mat-icon>
+        <h3>No foods logged yet</h3>
+        <p>Start by searching and adding foods to track your nutrition!</p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Global Actions -->
+  <mat-card
+    class="global-actions"
+    *ngIf="loggedFoods().length > 0 || targetMacros().kcal !== 2000"
+  >
+    <mat-card-content>
+      <div class="action-buttons">
+        <button
+          mat-raised-button
+          color="warn"
+          (click)="resetAll()"
+          class="reset-all-btn"
+        >
+          <mat-icon>restart_alt</mat-icon>
+          Reset Everything
+        </button>
+        <button
+          mat-stroked-button
+          color="accent"
+          (click)="clearLocalStorage()"
+          matTooltip="Clear all data and reset to defaults"
+        >
+          <mat-icon>delete_forever</mat-icon>
+          Clear All Data
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

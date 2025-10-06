@@ -14,4 +14,16 @@ export class NavService {
   toMainPage() {
     this.router.navigate(['/']);
   }
+
+  navigateAfterLogin() {
+    // Check if there's a return URL in query params
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnUrl = urlParams.get('returnUrl');
+
+    if (returnUrl) {
+      this.router.navigateByUrl(returnUrl);
+    } else {
+      this.toMainPage();
+    }
+  }
 }

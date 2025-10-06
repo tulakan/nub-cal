@@ -114,6 +114,7 @@ export class FoodListComponent implements OnInit, OnDestroy {
   addFood() {
     const dialogRef = this.dialog.open(FoodInfoComponent, {
       width: '450px',
+      maxHeight: '80vh',
       maxWidth: '95vw',
       data: { isEdit: false },
       disableClose: true,
@@ -129,6 +130,7 @@ export class FoodListComponent implements OnInit, OnDestroy {
   editFood(food: Food) {
     const dialogRef = this.dialog.open(FoodInfoComponent, {
       width: '450px',
+      maxHeight: '80vh',
       maxWidth: '95vw',
       data: { food, isEdit: true },
       disableClose: true,

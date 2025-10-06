@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { ApiService } from '../shared/services/api.service';
 import { FirebaseService } from '../shared/services/firebase.service';
 import { SignalStore } from './signal-store';
@@ -40,7 +40,7 @@ export class AuthStore extends SignalStore<AuthState> {
         console.log('user >> ', user);
         this.setLoginState(true);
         this.service.localStorage.setIsLoggedIn(true);
-        this.service.nav.toMainPage();
+        this.service.nav.navigateAfterLogin();
       })
       .catch(error => {
         console.error('error >> ', error);
@@ -51,8 +51,18 @@ export class AuthStore extends SignalStore<AuthState> {
   }
 
   logout() {
-    this.setLoginState(false);
-    localStorage.clear();
-    this.service.nav.toLogin();
+    signOut(this.firebaseService.auth)
+      .then(() => {
+        this.setLoginState(false);
+        this.service.localStorage.setIsLoggedIn(false);
+        this.service.nav.toLogin();
+      })
+      .catch(error => {
+        console.error('Logout error:', error);
+        // Still clear local state even if Firebase signout fails
+        this.setLoginState(false);
+        this.service.localStorage.setIsLoggedIn(false);
+        this.service.nav.toLogin();
+      });
   }
 }
