@@ -1,0 +1,259 @@
+<dialog-layout
+  [title]="'Add Food to Log'"
+  [showSaveButton]="true"
+  [showCancelButton]="true"
+  [disableSaveButton]="!foodSearchForm.valid || !showPreview"
+  (onSave)="onSave()"
+  (onCancel)="onCancel()"
+  (onCloseDialog)="onCloseDialog()"
+>
+  <form [formGroup]="foodSearchForm" class="food-search-form">
+    <div class="search-grid">
+      <mat-form-field appearance="fill" class="food-search">
+        <mat-label>Search Food</mat-label>
+        <input
+          type="text"
+          matInput
+          formControlName="selectedFood"
+          [matAutocomplete]="auto"
+          placeholder="Type to search foods..."
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+        />
+        <mat-autocomplete
+          #auto="matAutocomplete"
+          [displayWith]="displayFoodName"
+          class="food-autocomplete"
+          [panelWidth]="'auto'"
+          autoActiveFirstOption
+        >
+          <mat-option
+            *ngFor="let food of filteredOptions | async"
+            [value]="food"
+            class="food-option"
+          >
+            <div class="food-option-content">
+              <div class="food-name">{{ food.name }}</div>
+              <div class="food-info">
+                {{ food.kcal }}kcal, {{ food.protein }}g protein per
+                {{ food.servingSize }}{{ food.unit }}
+              </div>
+            </div>
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+
+      <div class="serving-size-container">
+        <mat-form-field appearance="outline" class="serving-size">
+          <mat-label>Serving Size</mat-label>
+          <input
+            matInput
+            type="number"
+            formControlName="servingSize"
+            step="0.1"
+            min="0.1"
+          />
+        </mat-form-field>
+        <span class="unit-label" *ngIf="selectedFood">
+          {{ selectedFood.unit }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Enhanced Nutrition Preview -->
+    <div class="nutrition-preview" *ngIf="showPreview">
+      <!-- <h3>Nutrition Summary</h3> -->
+      <div class="total-nutrition-card">
+        <!-- <div class="nutrition-header">
+          <h4>Total Nutrition for {{ servingSize }}{{ selectedFood?.unit }}</h4>
+          <div class="base-serving-info">
+            (Base: {{ selectedFood?.servingSize }}{{ selectedFood?.unit }}) -
+            Total {{ calculatedNutrition.kcal | number: '1.0-0' }}kcal
+          </div>
+        </div> -->
+        <div class="nutrition-header">
+          <h4>Total {{ calculatedNutrition.kcal | number: '1.0-0' }}kcal</h4>
+          <div class="base-serving-info">
+            (Base: {{ selectedFood?.servingSize }}{{ selectedFood?.unit }})
+          </div>
+        </div>
+
+        <!-- Macros Breakdown -->
+        <div class="macros-breakdown" *ngIf="calculatedNutrition.kcal > 0">
+          <div class="breakdown-bars">
+            <div class="breakdown-item">
+              <span class="breakdown-label"
+                >{{ calculatedNutrition.protein | number: '1.1-1' }}g Protein
+                ({{
+                  ((calculatedNutrition.protein * 4) /
+                    calculatedNutrition.kcal) *
+                    100 | number: '1.0-0'
+                }}%)</span
+              >
+              <div class="breakdown-bar">
+                <div
+                  class="breakdown-fill protein-fill"
+                  [style.width.%]="
+                    ((calculatedNutrition.protein * 4) /
+                      calculatedNutrition.kcal) *
+                    100
+                  "
+                ></div>
+              </div>
+            </div>
+            <div class="breakdown-item">
+              <span class="breakdown-label"
+                >{{ calculatedNutrition.carb | number: '1.1-1' }}g Carbs ({{
+                  ((calculatedNutrition.carb * 4) / calculatedNutrition.kcal) *
+                    100 | number: '1.0-0'
+                }}%)</span
+              >
+              <div class="breakdown-bar">
+                <div
+                  class="breakdown-fill carbs-fill"
+                  [style.width.%]="
+                    ((calculatedNutrition.carb * 4) /
+                      calculatedNutrition.kcal) *
+                    100
+                  "
+                ></div>
+              </div>
+            </div>
+            <div class="breakdown-item">
+              <span class="breakdown-label"
+                >{{ calculatedNutrition.fat | number: '1.1-1' }}g Fat ({{
+                  ((calculatedNutrition.fat * 9) / calculatedNutrition.kcal) *
+                    100 | number: '1.0-0'
+                }}%)</span
+              >
+              <div class="breakdown-bar">
+                <div
+                  class="breakdown-fill fat-fill"
+                  [style.width.%]="
+                    ((calculatedNutrition.fat * 9) / calculatedNutrition.kcal) *
+                    100
+                  "
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Remaining Nutrients Pre-Summary -->
+      <div class="remaining-preview" *ngIf="showPreview">
+        <h3>After Adding This Food</h3>
+        <div class="remaining-nutrition-card">
+          <div class="remaining-header">
+            <h4>Remaining Daily Targets</h4>
+          </div>
+
+          <div class="remaining-grid">
+            <div class="remaining-item calories">
+              <div class="remaining-icon">🎯</div>
+              <div class="remaining-content">
+                <div class="remaining-label">Calories Left</div>
+                <div class="remaining-value">
+                  {{ remainingAfterAdding.kcal | number: '1.0-0' }}kcal
+                </div>
+                <!-- <div
+                  class="remaining-value"
+                  [class]="
+                    remainingAfterAdding.kcal >= 0 ? 'positive' : 'negative'
+                  "
+                >
+                  {{ remainingAfterAdding.kcal >= 0 ? '+' : ''
+                  }}{{ remainingAfterAdding.kcal | number: '1.0-0' }}kcal
+                </div> -->
+              </div>
+            </div>
+
+            <div class="remaining-item protein">
+              <div class="remaining-icon">💪</div>
+              <div class="remaining-content">
+                <div class="remaining-label">Protein Left</div>
+                <div class="remaining-value">
+                  {{ remainingAfterAdding.protein | number: '1.0-0' }}kcal
+                </div>
+                <!-- <div
+                  class="remaining-value"
+                  [class]="
+                    remainingAfterAdding.protein >= 0 ? 'positive' : 'negative'
+                  "
+                >
+                  {{ remainingAfterAdding.protein >= 0 ? '+' : ''
+                  }}{{ remainingAfterAdding.protein | number: '1.1-1' }}g
+                </div> -->
+              </div>
+            </div>
+
+            <div class="remaining-item carbs">
+              <div class="remaining-icon">🌾</div>
+              <div class="remaining-content">
+                <div class="remaining-label">Carbs Left</div>
+                <div class="remaining-value">
+                  {{ remainingAfterAdding.carb | number: '1.0-0' }}kcal
+                </div>
+                <!-- <div
+                  class="remaining-value"
+                  [class]="
+                    remainingAfterAdding.carb >= 0 ? 'positive' : 'negative'
+                  "
+                >
+                  {{ remainingAfterAdding.carb >= 0 ? '+' : ''
+                  }}{{ remainingAfterAdding.carb | number: '1.1-1' }}g
+                </div> -->
+              </div>
+            </div>
+
+            <div class="remaining-item fat">
+              <div class="remaining-icon">🥑</div>
+              <div class="remaining-content">
+                <div class="remaining-label">Fat Left</div>
+                <div class="remaining-value">
+                  {{ remainingAfterAdding.fat | number: '1.0-0' }}kcal
+                </div>
+                <!-- <div
+                  class="remaining-value"
+                  [class]="
+                    remainingAfterAdding.fat >= 0 ? 'positive' : 'negative'
+                  "
+                >
+                  {{ remainingAfterAdding.fat >= 0 ? '+' : ''
+                  }}{{ remainingAfterAdding.fat | number: '1.1-1' }}g
+                </div> -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary Status -->
+          <div class="remaining-status">
+            <div class="status-item" *ngIf="remainingAfterAdding.kcal < 0">
+              <mat-icon class="warning-icon">warning</mat-icon>
+              <span class="status-text"
+                >This will exceed your calorie target by
+                {{
+                  Math.abs(remainingAfterAdding.kcal) | number: '1.0-0'
+                }}kcal</span
+              >
+            </div>
+            <div
+              class="status-item success"
+              *ngIf="
+                remainingAfterAdding.kcal >= 0 &&
+                remainingAfterAdding.kcal <= 200
+              "
+            >
+              <mat-icon class="success-icon">check_circle</mat-icon>
+              <span class="status-text"
+                >Perfect! This keeps you within your calorie target</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</dialog-layout>

@@ -7,57 +7,28 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import {
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Observable } from 'rxjs';
-import {
-  debounceTime,
-  distinctUntilChanged,
-  map,
-  startWith,
-} from 'rxjs/operators';
+import { AddFoodComponent } from '../../dialogs/add-food/add-food.component';
+import { TargetDialogComponent } from '../../dialogs/target-dialog/target-dialog.component';
 import { Food } from '../../shared/interface/food.interface';
+import {
+  LoggedFood,
+  TargetMacros,
+} from '../../shared/interface/nutrition.interface';
 import { MaterialModule } from '../../shared/modules/material.module';
-import { FoodService } from '../../shared/services/food.service';
 import { LocalStorageService } from '../../shared/services/local-storage.service';
 import { StoreService } from '../../stores/store.service';
-
-export interface TargetMacros {
-  kcal: number;
-  protein: number;
-  carb: number;
-  fat: number;
-}
-
-export interface LoggedFood {
-  food: Food;
-  servingSize: number;
-  calculatedNutrition: {
-    kcal: number;
-    protein: number;
-    carb: number;
-    fat: number;
-  };
-}
 
 @Component({
   selector: 'app-food-log',
   standalone: true,
-  imports: [MaterialModule, ReactiveFormsModule, CommonModule],
+  imports: [MaterialModule, CommonModule],
   templateUrl: './food-log.component.html',
   styleUrls: ['./food-log.component.scss'],
 })
 export class FoodLogPage implements OnInit {
   private destroyRef = inject(DestroyRef);
-  private fb = inject(FormBuilder);
-  private foodService = inject(FoodService);
   private localStorageService = inject(LocalStorageService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
@@ -81,10 +52,6 @@ export class FoodLogPage implements OnInit {
   loggedFoods = signal<LoggedFood[]>([]);
   allFoods = signal<Food[]>([]);
   filteredFoods = signal<Food[]>([]);
-
-  // Forms
-  targetForm!: FormGroup;
-  foodSearchForm!: FormGroup;
 
   // Computed values
   totalConsumed = computed(() => {
@@ -111,110 +78,31 @@ export class FoodLogPage implements OnInit {
     };
   });
 
-  // Observable for autocomplete
-  filteredOptions!: Observable<Food[]>;
-
   constructor() {}
 
   async ngOnInit() {
-    this.initializeForms();
-    await this.loadFoods();
-    this.setupAutocomplete();
     this.loadFromLocalStorage();
   }
 
-  private initializeForms() {
-    // Target macros form
-    this.targetForm = this.fb.group({
-      kcal: [
-        this.targetMacros().kcal,
-        [Validators.required, Validators.min(1)],
-      ],
-      protein: [
-        this.targetMacros().protein,
-        [Validators.required, Validators.min(1)],
-      ],
-      carb: [
-        this.targetMacros().carb,
-        [Validators.required, Validators.min(1)],
-      ],
-      fat: [this.targetMacros().fat, [Validators.required, Validators.min(1)]],
+  openAddFoodDialog() {
+    const dialogRef = this.dialog.open(AddFoodComponent, {
+      width: '700px',
+      height: '90vh',
+      maxWidth: '95vw',
+      disableClose: false,
+      autoFocus: true,
+      data: {
+        currentTargets: this.targetMacros(),
+        currentConsumed: this.totalConsumed(),
+      },
     });
 
-    // Food search form
-    this.foodSearchForm = this.fb.group({
-      selectedFood: [null, Validators.required],
-      servingSize: [1, [Validators.required, Validators.min(0.1)]],
-    });
-
-    // Listen to target form changes
-    this.targetForm.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(values => {
-        if (this.targetForm.valid) {
-          this.targetMacros.set(values);
-        }
-      });
-  }
-
-  private async loadFoods() {
-    try {
-      const foods = await this.foodService.getFoodList();
-      this.allFoods.set(foods as Food[]);
-      this.filteredFoods.set(foods as Food[]);
-    } catch (error) {
-      console.error('Error loading foods:', error);
-    }
-  }
-
-  private setupAutocomplete() {
-    this.filteredOptions = this.foodSearchForm
-      .get('selectedFood')!
-      .valueChanges.pipe(
-        startWith(''),
-        debounceTime(300),
-        distinctUntilChanged(),
-        map(value => {
-          if (typeof value === 'string') {
-            return this.filterFoods(value);
-          }
-          return this.allFoods();
-        })
-      );
-  }
-
-  private filterFoods(searchTerm: string): Food[] {
-    if (!searchTerm.trim()) {
-      return this.allFoods();
-    }
-    const filtered = this.allFoods().filter(food =>
-      food.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    this.filteredFoods.set(filtered);
-    return filtered;
-  }
-
-  displayFoodName(food: Food): string {
-    return food ? food.name : '';
-  }
-
-  addFood() {
-    if (this.foodSearchForm.valid) {
-      const selectedFood = this.foodSearchForm.get('selectedFood')!.value;
-      const servingSize = this.foodSearchForm.get('servingSize')!.value;
-
-      if (selectedFood && servingSize > 0) {
-        const multiplier = servingSize / selectedFood.servingSize;
-
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
         const loggedFood: LoggedFood = {
-          food: selectedFood,
-          servingSize: servingSize,
-          calculatedNutrition: {
-            kcal: Math.round(selectedFood.kcal * multiplier * 100) / 100,
-            protein: Math.round(selectedFood.protein * multiplier * 100) / 100,
-            carb: Math.round(selectedFood.carb * multiplier * 100) / 100,
-            fat: Math.round(selectedFood.fat * multiplier * 100) / 100,
-          },
+          food: result.food,
+          servingSize: result.servingSize,
+          calculatedNutrition: result.calculatedNutrition,
         };
 
         // Add to logged foods
@@ -224,17 +112,11 @@ export class FoodLogPage implements OnInit {
         this.saveToLocalStorage();
 
         // Show success message
-        this.snackBar.open(`${selectedFood.name} added to your log`, 'Close', {
+        this.snackBar.open(`${result.food.name} added to your log`, 'Close', {
           duration: 2000,
         });
-
-        // Reset form
-        this.foodSearchForm.patchValue({
-          selectedFood: null,
-          servingSize: 1,
-        });
       }
-    }
+    });
   }
 
   removeFood(index: number) {
@@ -249,14 +131,22 @@ export class FoodLogPage implements OnInit {
     }
   }
 
-  updateTargets() {
-    if (this.targetForm.valid) {
-      this.targetMacros.set(this.targetForm.value);
-      this.saveToLocalStorage();
-      this.snackBar.open('Target macros updated successfully', 'Close', {
-        duration: 2000,
-      });
-    }
+  openTargetDialog() {
+    const dialogRef = this.dialog.open(TargetDialogComponent, {
+      width: '500px',
+      maxHeight: '80vh',
+      maxWidth: '90vw',
+      data: {
+        currentTargets: this.targetMacros(),
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.targetMacros.set(result);
+        this.saveToLocalStorage();
+      }
+    });
   }
 
   getProgressPercentage(current: number, target: number): number {
@@ -303,8 +193,6 @@ export class FoodLogPage implements OnInit {
       if (savedTargetMacros) {
         const targetMacros = JSON.parse(savedTargetMacros) as TargetMacros;
         this.targetMacros.set(targetMacros);
-        // Update form with loaded values
-        this.targetForm.patchValue(targetMacros);
       }
     } catch (error) {
       console.error('Error loading from local storage:', error);
@@ -342,7 +230,6 @@ export class FoodLogPage implements OnInit {
         fat: 67,
       };
       this.targetMacros.set(defaultTargets);
-      this.targetForm.patchValue(defaultTargets);
       this.saveToLocalStorage();
       this.snackBar.open('Target macros reset to defaults', 'Close', {
         duration: 3000,
@@ -364,7 +251,6 @@ export class FoodLogPage implements OnInit {
       };
       this.loggedFoods.set([]);
       this.targetMacros.set(defaultTargets);
-      this.targetForm.patchValue(defaultTargets);
       this.saveToLocalStorage();
       this.snackBar.open('Everything has been reset successfully', 'Close', {
         duration: 3000,
@@ -390,8 +276,29 @@ export class FoodLogPage implements OnInit {
         };
         this.loggedFoods.set([]);
         this.targetMacros.set(defaultTargets);
-        this.targetForm.patchValue(defaultTargets);
         this.snackBar.open('All data cleared and reset to defaults', 'Close', {
+          duration: 3000,
+        });
+      } catch (error) {
+        console.error('Error clearing local storage:', error);
+        this.snackBar.open('Error clearing data. Please try again.', 'Close', {
+          duration: 3000,
+        });
+      }
+    }
+  }
+
+  clearFoodLogs() {
+    if (
+      confirm(
+        'Are you sure you want to permanently delete all your food log data? This action cannot be undone and will remove all saved information.'
+      )
+    ) {
+      try {
+        localStorage.removeItem(this.LOGGED_FOODS_KEY);
+        this.loggedFoods.set([]);
+
+        this.snackBar.open('All food log data cleared ', 'Close', {
           duration: 3000,
         });
       } catch (error) {

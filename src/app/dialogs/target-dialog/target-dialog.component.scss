@@ -1,0 +1,85 @@
+.target-dialog {
+  min-width: 400px;
+  max-width: 500px;
+
+  .dialog-subtitle {
+    color: var(--mdc-theme-on-surface, rgba(0, 0, 0, 0.6));
+    margin: 0 0 16px 0;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .target-form {
+    .target-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 8px;
+
+      @media (max-width: 480px) {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+    }
+
+    .target-field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      .field-label {
+        font-weight: 500;
+        font-size: 14px;
+        color: var(--mdc-theme-on-surface, rgba(0, 0, 0, 0.87));
+        margin: 0;
+      }
+
+      .compact-field {
+        width: 100%;
+
+        .mat-mdc-form-field-subscript-wrapper {
+          margin-top: 4px;
+        }
+      }
+    }
+  }
+}
+
+// Dialog actions styling
+::ng-deep .target-dialog {
+  .mat-mdc-dialog-actions {
+    padding: 16px 24px 24px;
+    gap: 8px;
+
+    button {
+      min-width: auto;
+      &:first-child {
+        margin-right: auto;
+      }
+    }
+  }
+}
+
+// Form field styling
+::ng-deep .target-dialog .compact-field {
+  .mat-mdc-form-field-infix {
+    min-height: 48px;
+  }
+
+  .mat-mdc-text-field-wrapper {
+    border-radius: 8px;
+  }
+
+  .mat-mdc-form-field-error {
+    font-size: 12px;
+    line-height: 1.2;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 480px) {
+  .target-dialog {
+    min-width: 280px;
+    max-width: 90vw;
+  }
+}

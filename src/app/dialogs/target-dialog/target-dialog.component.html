@@ -1,0 +1,91 @@
+<dialog-layout
+  [title]="'Daily Nutrition Goals'"
+  [showSaveButton]="true"
+  [showCancelButton]="true"
+  [showResetButton]="true"
+  [disableSaveButton]="targetForm.invalid"
+  (onSave)="onSave()"
+  (onCancel)="onCancel()"
+  (onReset)="onReset()"
+  (onCloseDialog)="onCloseDialog()"
+>
+  <p class="dialog-subtitle">
+    Set your daily nutrition targets to help track your progress
+  </p>
+
+  <form [formGroup]="targetForm" class="target-form">
+    <div class="target-grid">
+      <div class="target-field">
+        <label class="field-label">Calories</label>
+        <mat-form-field appearance="outline" class="compact-field">
+          <input
+            matInput
+            type="number"
+            formControlName="kcal"
+            placeholder="kcal"
+          />
+          <mat-error *ngIf="targetForm.get('kcal')?.hasError('required')">
+            Calories is required
+          </mat-error>
+          <mat-error *ngIf="targetForm.get('kcal')?.hasError('min')">
+            Must be at least 1 kcal
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="target-field">
+        <label class="field-label">Protein</label>
+        <mat-form-field appearance="outline" class="compact-field">
+          <input
+            matInput
+            type="number"
+            formControlName="protein"
+            placeholder="grams"
+          />
+          <mat-error *ngIf="targetForm.get('protein')?.hasError('required')">
+            Protein is required
+          </mat-error>
+          <mat-error *ngIf="targetForm.get('protein')?.hasError('min')">
+            Must be at least 1 gram
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="target-field">
+        <label class="field-label">Carbs</label>
+        <mat-form-field appearance="outline" class="compact-field">
+          <input
+            matInput
+            type="number"
+            formControlName="carb"
+            placeholder="grams"
+          />
+          <mat-error *ngIf="targetForm.get('carb')?.hasError('required')">
+            Carbs is required
+          </mat-error>
+          <mat-error *ngIf="targetForm.get('carb')?.hasError('min')">
+            Must be at least 1 gram
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="target-field">
+        <label class="field-label">Fat</label>
+        <mat-form-field appearance="outline" class="compact-field">
+          <input
+            matInput
+            type="number"
+            formControlName="fat"
+            placeholder="grams"
+          />
+          <mat-error *ngIf="targetForm.get('fat')?.hasError('required')">
+            Fat is required
+          </mat-error>
+          <mat-error *ngIf="targetForm.get('fat')?.hasError('min')">
+            Must be at least 1 gram
+          </mat-error>
+        </mat-form-field>
+      </div>
+    </div>
+  </form>
+</dialog-layout>

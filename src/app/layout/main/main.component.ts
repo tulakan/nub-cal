@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
+import * as packageInfo from '../../../../package.json';
 import { MaterialModule } from '../../shared/modules/material.module';
 import { ThemeService } from '../../shared/services/theme.service';
 
@@ -15,7 +16,8 @@ import { ThemeService } from '../../shared/services/theme.service';
           <mat-icon>menu</mat-icon>
         </button> -->
         <span>Health Tracker</span>
-        <!-- <span class="spacer"></span> -->
+        <span class="spacer"></span>
+        <span class="version-text">v{{ version }}</span>
         <!-- <button
           mat-icon-button
           (click)="toggleTheme()"
@@ -75,6 +77,11 @@ import { ThemeService } from '../../shared/services/theme.service';
       flex: 1 1 auto;
     }
 
+    .version-text {
+      font-size: 0.8em;
+      opacity: 0.8;
+    }
+
     .content-container {
       flex-grow: 1;
       width: 100%;
@@ -102,6 +109,7 @@ import { ThemeService } from '../../shared/services/theme.service';
 })
 export class MainComponent {
   private router = inject(Router);
+  version = packageInfo.version;
 
   constructor(public themeService: ThemeService) {}
 
@@ -121,3 +129,5 @@ export class MainComponent {
     this.router.navigate(['/body-composition']);
   }
 }
+
+// todo: target / add food log to dialog / move remain kcal to top and re ui /
