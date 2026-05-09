@@ -20,6 +20,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'menu-plan',
+        loadComponent: () =>
+          import('./pages/menu-plan/menu-plan.component').then(
+            m => m.MenuPlanComponent
+          ),
+      },
+      {
         path: 'food-list',
         loadComponent: () =>
           import('./pages/food-list/food-list.component').then(
@@ -31,6 +38,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/body-composition/body-composition.page').then(
             m => m.BodyCompositionPage
+          ),
+      },
+      {
+        path: 'circumference',
+        loadComponent: () =>
+          import('./pages/circumference/circumference.page').then(
+            m => m.CircumferencePage
           ),
       },
       // {

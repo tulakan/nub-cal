@@ -58,23 +58,23 @@ export class ThemeService {
     const isDark = this.isDarkTheme.value;
 
     return {
-      primary: '#4CAF50',
-      primaryLight: '#81C784',
-      primaryDark: '#388E3C',
-      secondary: '#2196F3',
-      secondaryLight: '#64B5F6',
-      secondaryDark: '#1976D2',
-      warn: '#FF9800',
-      warnLight: '#FFB74D',
-      warnDark: '#F57C00',
-      success: '#4CAF50',
-      error: '#F44336',
-      background: isDark ? '#303030' : '#FAFAFA',
-      surface: isDark ? '#424242' : '#FFFFFF',
+      primary: '#111111',
+      primaryLight: '#333333',
+      primaryDark: '#000000',
+      secondary: '#555555',
+      secondaryLight: '#777777',
+      secondaryDark: '#333333',
+      warn: '#888888',
+      warnLight: '#AAAAAA',
+      warnDark: '#666666',
+      success: '#333333',
+      error: '#000000',
+      background: isDark ? '#121212' : '#FFFFFF',
+      surface: isDark ? '#1E1E1E' : '#F5F5F5',
       textPrimary: isDark ? 'rgba(255, 255, 255, 0.87)' : 'rgba(0, 0, 0, 0.87)',
       textSecondary: isDark
-        ? 'rgba(255, 255, 255, 0.54)'
-        : 'rgba(0, 0, 0, 0.54)',
+        ? 'rgba(255, 255, 255, 0.60)'
+        : 'rgba(0, 0, 0, 0.60)',
     };
   }
 

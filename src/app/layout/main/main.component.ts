@@ -15,9 +15,9 @@ import { ThemeService } from '../../shared/services/theme.service';
         <!-- <button mat-icon-button>
           <mat-icon>menu</mat-icon>
         </button> -->
-        <span>Health Tracker</span>
+        <span>Nub KCal</span>
         <span class="spacer"></span>
-        <span class="version-text">v{{ version }}</span>
+        <!-- <span class="version-text">v{{ version }}</span> -->
         <!-- <button
           mat-icon-button
           (click)="toggleTheme()"
@@ -42,6 +42,13 @@ import { ThemeService } from '../../shared/services/theme.service';
           </button>
           <button
             mat-icon-button
+            (click)="navigateToMenuPlan()"
+            matTooltip="Menu & Plan"
+          >
+            <mat-icon>restaurant_menu</mat-icon>
+          </button>
+          <button
+            mat-icon-button
             (click)="navigateToFoodList()"
             matTooltip="Food List"
           >
@@ -53,6 +60,13 @@ import { ThemeService } from '../../shared/services/theme.service';
             (click)="navigateToBodyComposition()"
           >
             <mat-icon>monitor_weight</mat-icon>
+          </button>
+          <button
+            mat-icon-button
+            matTooltip="Circumference"
+            (click)="navigateToCircumference()"
+          >
+            <mat-icon>straighten</mat-icon>
           </button>
         </nav>
       </div>
@@ -102,7 +116,7 @@ import { ThemeService } from '../../shared/services/theme.service';
       display: flex;
       gap: 24px;
       width: 100%;
-      max-width: 300px;
+      max-width: 400px;
       justify-content: space-around;
     }
   `,
@@ -121,12 +135,20 @@ export class MainComponent {
     this.router.navigate(['/food-log']);
   }
 
+  navigateToMenuPlan(): void {
+    this.router.navigate(['/menu-plan']);
+  }
+
   navigateToFoodList(): void {
     this.router.navigate(['/food-list']);
   }
 
   navigateToBodyComposition(): void {
     this.router.navigate(['/body-composition']);
+  }
+
+  navigateToCircumference(): void {
+    this.router.navigate(['/circumference']);
   }
 }
 

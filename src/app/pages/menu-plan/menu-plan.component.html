@@ -1,0 +1,158 @@
+<div class="container mx-auto p-4 space-y-6">
+  <h1 class="text-2xl font-bold mb-4">Meal Planning</h1>
+
+  <!-- Section 1: Create Menu -->
+  <mat-card class="p-6 bg-surface shadow-lg rounded-xl">
+    <mat-card-header>
+      <mat-card-title>Create New Menu</mat-card-title>
+      <mat-card-subtitle>Define a menu template by adding ingredients</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content class="space-y-4 mt-4">
+      <!-- Menu Name -->
+      <mat-form-field class="w-full" appearance="outline">
+        <mat-label>Menu Name</mat-label>
+        <input matInput [(ngModel)]="newMenuName" placeholder="e.g., Basil Chicken">
+      </mat-form-field>
+
+      <!-- Add Ingredient Form -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Select Food</mat-label>
+          <input type="text"
+                 placeholder="Type to search..."
+                 aria-label="Food"
+                 matInput
+                 [(ngModel)]="foodSearchTerm"
+                 (ngModelChange)="onFoodSearchChange()"
+                 [matAutocomplete]="auto"
+                 autocomplete="off">
+          <mat-autocomplete #auto="matAutocomplete" [displayWith]="displayFoodName" (optionSelected)="onFoodSelected($event)">
+            <mat-option *ngFor="let food of filteredFoods" [value]="food">
+              {{food.name}} ({{food.kcal}} kcal / {{food.servingSize}}{{food.unit}})
+            </mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Quantity</mat-label>
+          <input matInput type="number" [(ngModel)]="ingredientQuantity" placeholder="Amount">
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" (click)="addIngredient()" class="h-14">
+          <mat-icon>add</mat-icon> Add Ingredient
+        </button>
+      </div>
+
+      <!-- Current Ingredients List -->
+      <div *ngIf="currentMenuIngredients.length > 0" class="mt-4">
+        <h3 class="text-lg font-semibold mb-2">Ingredients</h3>
+        <div class="space-y-2">
+          <div *ngFor="let item of currentMenuIngredients; let i = index" class="flex flex-col md:flex-row justify-between items-start md:items-center p-3 bg-background rounded-lg gap-2">
+            <div>
+              <span class="font-medium">{{item.food?.name}}</span>
+              <span class="text-sm text-secondary ml-2">{{item.quantity}} {{item.food?.unit}}</span>
+            </div>
+            <div class="flex items-center justify-between w-full md:w-auto space-x-4">
+              <span class="text-sm">{{ (item.food?.kcal || 0) * (item.quantity / (item.food?.servingSize || 1)) | number:'1.0-0' }} kcal</span>
+              <button mat-icon-button color="warn" (click)="removeIngredient(i)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Menu Totals -->
+        <div class="mt-4 p-4 bg-background rounded-lg border border-primary/20">
+          <div class="grid grid-cols-4 gap-2 text-center text-sm">
+            <div>
+              <div class="text-secondary">KCal</div>
+              <div class="font-bold text-lg">{{calculateMenuMacros().kcal | number:'1.0-0'}}</div>
+            </div>
+            <div>
+              <div class="text-secondary">Protein</div>
+              <div class="font-bold text-lg">{{calculateMenuMacros().protein | number:'1.0-1'}}g</div>
+            </div>
+            <div>
+              <div class="text-secondary">Carbs</div>
+              <div class="font-bold text-lg">{{calculateMenuMacros().carb | number:'1.0-1'}}g</div>
+            </div>
+            <div>
+              <div class="text-secondary">Fat</div>
+              <div class="font-bold text-lg">{{calculateMenuMacros().fat | number:'1.0-1'}}g</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end mt-4">
+        <button mat-raised-button color="primary" (click)="saveMenu()" [disabled]="!newMenuName || currentMenuIngredients.length === 0">
+          <mat-icon>save</mat-icon> Save Menu
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Section 2: Daily Plan -->
+  <mat-card class="p-6 bg-surface shadow-lg rounded-xl">
+    <mat-card-header>
+      <mat-card-title>Daily Plan</mat-card-title>
+      <mat-card-subtitle>Select menus and adjust quantities for the day</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content class="space-y-4 mt-4">
+      <!-- Select Menus -->
+      <mat-form-field class="w-full" appearance="outline">
+        <mat-label>Select Menus for Today</mat-label>
+        <mat-select [(ngModel)]="selectedMenuIds" multiple (selectionChange)="onMenuSelectChange()">
+          <mat-option *ngFor="let menu of menus" [value]="menu.id">
+            {{menu.name}}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Planned Menus Details -->
+      <div *ngIf="plannedMenus.length > 0" class="space-y-6 mt-4">
+        <div *ngFor="let menu of plannedMenus" class="p-4 bg-background rounded-lg">
+          <h3 class="text-lg font-semibold mb-2">{{menu.name}}</h3>
+          <div class="space-y-2">
+            <div *ngFor="let item of menu.ingredients" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+              <div>
+                <span class="font-medium">{{item.food?.name}}</span>
+                <span class="text-sm text-secondary ml-2">(Base: {{item.food?.servingSize}}{{item.food?.unit}})</span>
+              </div>
+              <mat-form-field appearance="outline" class="w-full">
+                <mat-label>Quantity ({{item.food?.unit}})</mat-label>
+                <input matInput type="number" [(ngModel)]="item.quantity" (ngModelChange)="calculatePlanTotals()">
+              </mat-form-field>
+              <div class="text-right">
+                <span class="font-bold">{{ (item.food?.kcal || 0) * (item.quantity / (item.food?.servingSize || 1)) | number:'1.0-0' }}</span> kcal
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grand Totals -->
+        <div class="p-6 bg-primary text-white rounded-xl shadow-inner">
+          <h3 class="text-lg font-semibold mb-4 text-center">Total for the Day</h3>
+          <div class="grid grid-cols-4 gap-4 text-center">
+            <div>
+              <div class="text-white/80 text-sm">KCal</div>
+              <div class="text-2xl font-bold">{{calculatePlanTotals().kcal | number:'1.0-0'}}</div>
+            </div>
+            <div>
+              <div class="text-white/80 text-sm">Protein</div>
+              <div class="text-2xl font-bold">{{calculatePlanTotals().protein | number:'1.0-1'}}g</div>
+            </div>
+            <div>
+              <div class="text-white/80 text-sm">Carbs</div>
+              <div class="text-2xl font-bold">{{calculatePlanTotals().carb | number:'1.0-1'}}g</div>
+            </div>
+            <div>
+              <div class="text-white/80 text-sm">Fat</div>
+              <div class="text-2xl font-bold">{{calculatePlanTotals().fat | number:'1.0-1'}}g</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

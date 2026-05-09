@@ -31,6 +31,12 @@
         <td>{{ totalConsumed().carb | number: '1.1-1' }}g</td>
         <td>{{ totalConsumed().fat | number: '1.1-1' }}g</td>
       </tr>
+
+      <!-- todo: swap +/- Sign. remain -> -(green) / over -> +(red) -->
+      <!-- todo: recheck gap value / unit -->
+      <!-- todo: recheck unit in log list just use xxp xxc xxf instena og xxxg protein -->
+      <!-- todo: add logout button -->
+      <!-- todo: add flag that indicate is ingradiant / food menu -->
       <tr>
         <td class="label-cell left-cell">Remaining</td>
         <td [class]="remainingMacros().kcal >= 0 ? 'positive' : 'negative'">
@@ -104,12 +110,20 @@
       </div>
     </div>
 
-    <div class="w-full">
+    <div class="w-full empty-state" *ngIf="loggedFoods().length === 0">
+      <div class="empty-content">
+        <mat-icon class="empty-icon">restaurant</mat-icon>
+        <h3>No foods logged</h3>
+        <p>Start by adding foods to track your nutrition.</p>
+      </div>
+    </div>
+    <div class="w-full" *ngIf="loggedFoods().length > 0">
       <button
         mat-raised-button
         color="warn"
         class="add-food-btn w-full"
         (click)="clearFoodLogs()"
+        [disabled]="loggedFoods().length === 0"
       >
         <mat-icon>delete_forever</mat-icon>
         Delete All Logged Foods
@@ -117,68 +131,9 @@
     </div>
   </mat-card>
 
-  <mat-card class="food-summary-section" *ngIf="false">
-    <mat-card-header>
-      <div class="card-header-content">
-        <div class="header-text">
-          <mat-card-title>Today's Food Log</mat-card-title>
-          <mat-card-subtitle>Foods you've consumed today</mat-card-subtitle>
-        </div>
-        <div class="header-actions">
-          <button
-            mat-icon-button
-            color="warn"
-            (click)="resetLoggedFoods()"
-            matTooltip="Clear all logged foods"
-          >
-            <mat-icon>clear_all</mat-icon>
-          </button>
-        </div>
-      </div>
-    </mat-card-header>
-    <mat-card-content>
-      <!-- Total Summary -->
-      <!-- <div class="total-summary">
-        <h3>Total Consumed</h3>
-        <div class="total-grid">
-          <div class="total-item">
-            <span class="total-label">Calories:</span>
-            <span class="total-value"
-              >{{ totalConsumed().kcal | number: '1.1-1' }}kcal</span
-            >
-          </div>
-          <div class="total-item">
-            <span class="total-label">Protein:</span>
-            <span class="total-value"
-              >{{ totalConsumed().protein | number: '1.1-1' }}g</span
-            >
-          </div>
-          <div class="total-item">
-            <span class="total-label">Carbs:</span>
-            <span class="total-value"
-              >{{ totalConsumed().carb | number: '1.1-1' }}g</span
-            >
-          </div>
-          <div class="total-item">
-            <span class="total-label">Fat:</span>
-            <span class="total-value"
-              >{{ totalConsumed().fat | number: '1.1-1' }}g</span
-            >
-          </div>
-        </div>
-      </div> -->
-    </mat-card-content>
-  </mat-card>
-
   <!-- Empty State -->
-  <mat-card class="empty-state" *ngIf="loggedFoods().length === 0">
-    <mat-card-content>
-      <div class="empty-content">
-        <mat-icon class="empty-icon">restaurant</mat-icon>
-        <h3>No foods logged yet</h3>
-        <p>Start by searching and adding foods to track your nutrition!</p>
-      </div>
-    </mat-card-content>
+  <mat-card>
+    <mat-card-content> </mat-card-content>
   </mat-card>
 
   <!-- Global Actions -->
