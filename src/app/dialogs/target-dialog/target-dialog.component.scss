@@ -4,8 +4,8 @@
 
   .dialog-subtitle {
     color: var(--mdc-theme-on-surface, rgba(0, 0, 0, 0.6));
-    margin: 0 0 16px 0;
-    font-size: 14px;
+    margin: 0 0 8px 0;
+    font-size: 12px;
     line-height: 1.4;
   }
 
@@ -13,13 +13,8 @@
     .target-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-top: 8px;
-
-      @media (max-width: 480px) {
-        grid-template-columns: 1fr;
-        gap: 12px;
-      }
+      gap: 8px;
+      margin-top: 4px;
     }
 
     .target-field {
@@ -63,7 +58,7 @@
 // Form field styling
 ::ng-deep .target-dialog .compact-field {
   .mat-mdc-form-field-infix {
-    min-height: 48px;
+    min-height: 40px;
   }
 
   .mat-mdc-text-field-wrapper {
@@ -81,5 +76,13 @@
   .target-dialog {
     min-width: 280px;
     max-width: 90vw;
+
+    .dialog-subtitle {
+      font-size: 16px;
+    }
+
+    .target-form .target-field .field-label {
+      font-size: 16px;
+    }
   }
 }

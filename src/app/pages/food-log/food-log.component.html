@@ -9,54 +9,56 @@
       </div>
     </div>
 
-    <table class="remain-table">
-      <tr>
-        <th></th>
-        <th>Calories</th>
-        <th>Protein</th>
-        <th>Carbs</th>
-        <th>Fat</th>
-      </tr>
-      <tr>
-        <td class="label-cell left-cell">Target</td>
-        <td>{{ targetMacros().kcal | number: '1.0-0' }}kcal</td>
-        <td>{{ targetMacros().protein | number: '1.1-1' }}g</td>
-        <td>{{ targetMacros().carb | number: '1.1-1' }}g</td>
-        <td>{{ targetMacros().fat | number: '1.1-1' }}g</td>
-      </tr>
-      <tr>
-        <td class="label-cell left-cell">Consumed</td>
-        <td>{{ totalConsumed().kcal | number: '1.0-0' }}kcal</td>
-        <td>{{ totalConsumed().protein | number: '1.1-1' }}g</td>
-        <td>{{ totalConsumed().carb | number: '1.1-1' }}g</td>
-        <td>{{ totalConsumed().fat | number: '1.1-1' }}g</td>
-      </tr>
+    <div class="overflow-x-auto w-full">
+      <table class="remain-table">
+        <tr>
+          <th></th>
+          <th>Calories</th>
+          <th>Protein</th>
+          <th>Carbs</th>
+          <th>Fat</th>
+        </tr>
+        <tr>
+          <td class="label-cell left-cell">Target</td>
+          <td>{{ targetMacros().kcal | number: '1.0-0' }}kcal</td>
+          <td>{{ targetMacros().protein | number: '1.1-1' }}g</td>
+          <td>{{ targetMacros().carb | number: '1.1-1' }}g</td>
+          <td>{{ targetMacros().fat | number: '1.1-1' }}g</td>
+        </tr>
+        <tr>
+          <td class="label-cell left-cell">Consumed</td>
+          <td>{{ totalConsumed().kcal | number: '1.0-0' }}kcal</td>
+          <td>{{ totalConsumed().protein | number: '1.1-1' }}g</td>
+          <td>{{ totalConsumed().carb | number: '1.1-1' }}g</td>
+          <td>{{ totalConsumed().fat | number: '1.1-1' }}g</td>
+        </tr>
 
-      <!-- todo: swap +/- Sign. remain -> -(green) / over -> +(red) -->
-      <!-- todo: recheck gap value / unit -->
-      <!-- todo: recheck unit in log list just use xxp xxc xxf instena og xxxg protein -->
-      <!-- todo: add logout button -->
-      <!-- todo: add flag that indicate is ingradiant / food menu -->
-      <tr>
-        <td class="label-cell left-cell">Remaining</td>
-        <td [class]="remainingMacros().kcal >= 0 ? 'positive' : 'negative'">
-          {{ remainingMacros().kcal >= 0 ? '+' : ''
-          }}{{ remainingMacros().kcal | number: '1.0-0' }}kcal
-        </td>
-        <td [class]="remainingMacros().protein >= 0 ? 'positive' : 'negative'">
-          {{ remainingMacros().protein >= 0 ? '+' : ''
-          }}{{ remainingMacros().protein | number: '1.1-1' }}g
-        </td>
-        <td [class]="remainingMacros().carb >= 0 ? 'positive' : 'negative'">
-          {{ remainingMacros().carb >= 0 ? '+' : ''
-          }}{{ remainingMacros().carb | number: '1.1-1' }}g
-        </td>
-        <td [class]="remainingMacros().fat >= 0 ? 'positive' : 'negative'">
-          {{ remainingMacros().fat >= 0 ? '+' : ''
-          }}{{ remainingMacros().fat | number: '1.1-1' }}g
-        </td>
-      </tr>
-    </table>
+        <!-- todo: swap +/- Sign. remain -> -(green) / over -> +(red) -->
+        <!-- todo: recheck gap value / unit -->
+        <!-- todo: recheck unit in log list just use xxp xxc xxf instena og xxxg protein -->
+        <!-- todo: add logout button -->
+        <!-- todo: add flag that indicate is ingradiant / food menu -->
+        <tr>
+          <td class="label-cell left-cell">Remaining</td>
+          <td [class]="remainingMacros().kcal >= 0 ? 'positive' : 'negative'">
+            {{ remainingMacros().kcal >= 0 ? '+' : ''
+            }}{{ remainingMacros().kcal | number: '1.0-0' }}kcal
+          </td>
+          <td [class]="remainingMacros().protein >= 0 ? 'positive' : 'negative'">
+            {{ remainingMacros().protein >= 0 ? '+' : ''
+            }}{{ remainingMacros().protein | number: '1.1-1' }}g
+          </td>
+          <td [class]="remainingMacros().carb >= 0 ? 'positive' : 'negative'">
+            {{ remainingMacros().carb >= 0 ? '+' : ''
+            }}{{ remainingMacros().carb | number: '1.1-1' }}g
+          </td>
+          <td [class]="remainingMacros().fat >= 0 ? 'positive' : 'negative'">
+            {{ remainingMacros().fat >= 0 ? '+' : ''
+            }}{{ remainingMacros().fat | number: '1.1-1' }}g
+          </td>
+        </tr>
+      </table>
+    </div>
   </mat-card>
 
   <mat-card class="food-log-card food-log-section">
@@ -131,10 +133,7 @@
     </div>
   </mat-card>
 
-  <!-- Empty State -->
-  <mat-card>
-    <mat-card-content> </mat-card-content>
-  </mat-card>
+
 
   <!-- Global Actions -->
   <!-- <mat-card

@@ -7,9 +7,35 @@
 /* Most styling is handled by Tailwind CSS in the template */
 
 mat-card {
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem !important;
 }
 
 .grid {
   display: grid;
+}
+
+@media (max-width: 600px) {
+  .mat-mdc-form-field-infix {
+    min-height: 40px !important;
+  }
+}
+
+.custom-mini-fab {
+  width: 32px !important;
+  height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-bottom: 6px !important;
+  padding: 0 !important;
+  
+  .mat-icon {
+    font-size: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+  }
 }

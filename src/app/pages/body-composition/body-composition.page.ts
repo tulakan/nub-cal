@@ -280,23 +280,26 @@ echarts.use([
 
     @media (max-width: 600px) {
       .container {
-        padding: 8px;
+        padding: 4px;
       }
       .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
       }
       .chart-item {
-        height: 300px;
+        height: 260px;
       }
       .stat-item {
-        padding: 8px;
+        padding: 4px;
+      }
+      .stat-label {
+        font-size: 11px;
       }
       .stat-value {
-        font-size: 14px;
+        font-size: 13px;
       }
       .stat-value.latest {
-        font-size: 16px;
+        font-size: 15px;
       }
     }
   `,
@@ -476,19 +479,11 @@ export class BodyCompositionPage implements OnInit, AfterViewInit {
     .form-container {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
+      gap: 8px;
       padding-top: 10px;
     }
     .full-width {
       grid-column: span 2;
-    }
-    @media (max-width: 600px) {
-      .form-container {
-        grid-template-columns: 1fr;
-      }
-      .full-width {
-        grid-column: span 1;
-      }
     }
   `
 })

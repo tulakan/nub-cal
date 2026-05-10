@@ -89,7 +89,7 @@ import { ApiService } from '../services/api.service';
   `,
   styles: `
     .dialog-container {
-      @apply w-full h-full p-4 flex flex-col justify-start items-start;
+      @apply w-full h-full p-3 flex flex-col justify-start items-start;
     }
 
     .dialog-header-container {

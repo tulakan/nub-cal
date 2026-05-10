@@ -15,7 +15,7 @@ import { ThemeService } from '../../shared/services/theme.service';
         <!-- <button mat-icon-button>
           <mat-icon>menu</mat-icon>
         </button> -->
-        <span>Nub KCal</span>
+        <span>{{ pageTitle }}</span>
         <span class="spacer"></span>
         <!-- <span class="version-text">v{{ version }}</span> -->
         <!-- <button
@@ -84,8 +84,8 @@ import { ThemeService } from '../../shared/services/theme.service';
     }
 
     .main-toolbar {
-      min-height: 48px;
-      height: 48px;
+      min-height: 44px;
+      height: 44px;
     }
     .spacer {
       flex: 1 1 auto;
@@ -99,13 +99,13 @@ import { ThemeService } from '../../shared/services/theme.service';
     .content-container {
       flex-grow: 1;
       width: 100%;
-      padding: 8px;
+      padding: 4px;
       overflow-y: scroll;
     }
 
     .footer {
       width: 100%;
-      height: 64px;
+      height: 52px;
       // border-top: 1px solid var(--text-secondary);
       display: flex;
       align-items: center;
@@ -114,16 +114,26 @@ import { ThemeService } from '../../shared/services/theme.service';
 
     .bottom-nav {
       display: flex;
-      gap: 24px;
+      gap: 12px;
       width: 100%;
       max-width: 400px;
-      justify-content: space-around;
+      justify-content: space-evenly;
     }
   `,
 })
 export class MainComponent {
   private router = inject(Router);
   version = packageInfo.version;
+
+  get pageTitle(): string {
+    const url = this.router.url;
+    if (url.includes('food-log')) return 'Food Log';
+    if (url.includes('menu-plan')) return 'Menu & Plan';
+    if (url.includes('food-list')) return 'Food List';
+    if (url.includes('body-composition')) return 'Body Composition';
+    if (url.includes('circumference')) return 'Circumference';
+    return 'Nub KCal';
+  }
 
   constructor(public themeService: ThemeService) {}
 

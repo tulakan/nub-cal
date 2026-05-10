@@ -18,7 +18,7 @@ import { StoreService } from '../../stores/store.service';
           [formGroup]="loginForm"
           (ngSubmit)="onSubmit()"
         >
-          <mat-form-field appearance="outline" class="form-field email">
+          <mat-form-field appearance="fill" class="form-field email">
             <mat-label>Email</mat-label>
             <input
               matInput
@@ -26,7 +26,7 @@ import { StoreService } from '../../stores/store.service';
               formControlName="email"
             />
           </mat-form-field>
-          <mat-form-field appearance="outline" class="form-field password">
+          <mat-form-field appearance="fill" class="form-field password">
             <mat-label>Password</mat-label>
             <input
               matInput
@@ -54,8 +54,9 @@ import { StoreService } from '../../stores/store.service';
     }
 
     .login-card {
-      width: 400px;
-      padding: 16px;
+      width: 100%;
+      max-width: 400px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -74,10 +75,10 @@ import { StoreService } from '../../stores/store.service';
       width: 100%;
     }
     .app-title {
-      font-size: 24px;
+      font-size: 20px;
       font-weight: bold;
       text-align: center;
-      margin-bottom: 16px;
+      margin-bottom: 8px;
     }
   `,
 })

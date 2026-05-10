@@ -1,37 +1,8 @@
-// .food-info-dialog {
-//   width: 100%;
-//   max-width: 450px;
-//   min-width: 400px;
-
-//   ::ng-deep .mat-mdc-dialog-title {
-//     display: flex;
-//     align-items: center;
-//     gap: 8px;
-//     margin-bottom: 16px;
-
-//     mat-icon {
-//       color: var(--mat-primary-color, #1976d2);
-//     }
-//   }
-
-//   ::ng-deep .mat-mdc-dialog-content {
-//     padding: 0 24px;
-//     margin: 0;
-//     max-height: 70vh;
-//     overflow-y: auto;
-//   }
-
-//   ::ng-deep .mat-mdc-dialog-actions {
-//     padding: 16px 24px;
-//     margin: 0;
-//     gap: 8px;
-//   }
-
 .food-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 8px 0;
+  gap: 8px;
+  padding: 4px 0;
 
   .full-width {
     width: 100%;
@@ -50,7 +21,7 @@
 
   .form-row {
     display: flex;
-    gap: 16px;
+    gap: 8px;
     align-items: flex-start;
 
     .serving-size {
@@ -86,7 +57,7 @@
     .macros-grid {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 6px;
 
       .macro-field {
         width: 100%;
