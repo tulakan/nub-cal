@@ -1,8 +1,11 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { LocalStorageService } from '../../shared/services/local-storage.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MaterialModule } from '../../shared/modules/material.module';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
+import { CreateMenuComponent } from '../../dialogs/create-menu/create-menu.component';
 import { FoodService } from '../../shared/services/food.service';
 import { MenuService } from '../../shared/services/menu.service';
 import { Food } from '../../shared/interface/food.interface';
@@ -19,117 +22,113 @@ export class MenuPlanComponent implements OnInit {
   private foodService = inject(FoodService);
   private menuService = inject(MenuService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
+  private localStorageService = inject(LocalStorageService);
+
+  targetMacros = {
+    kcal: 2000,
+    protein: 150,
+    carb: 250,
+    fat: 67,
+  };
 
   foods: Food[] = [];
   menus: Menu[] = [];
-
-  // For Creating Menu
-  newMenuName: string = '';
-  foodSearchTerm: string = '';
-  selectedFood: Food | null = null;
-  ingredientQuantity: number = 0;
-  currentMenuIngredients: (MenuIngredient & { food?: Food })[] = [];
-  filteredFoods: Food[] = [];
+  filteredMenus: Menu[] = [];
+  menuSearchQuery = '';
 
   // For Planning
   selectedMenuIds: string[] = [];
   plannedMenus: (Menu & { id: string; ingredients: (MenuIngredient & { food?: Food })[] })[] = [];
 
+  startY = 0;
+  pullDistance = 0;
+  isRefreshing = false;
+
   ngOnInit() {
     this.loadFoods();
     this.loadMenus();
+    
+    const savedTargets = localStorage.getItem('food-log-target-macros');
+    if (savedTargets) {
+      this.targetMacros = JSON.parse(savedTargets);
+    }
+  }
+
+  onTouchStart(e: TouchEvent) {
+    if (window.scrollY === 0) {
+      this.startY = e.touches[0].clientY;
+    }
+  }
+
+  onTouchMove(e: TouchEvent) {
+    if (this.startY === 0) return;
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - this.startY;
+    if (diff > 0 && window.scrollY === 0) {
+      this.pullDistance = Math.min(diff * 0.5, 80);
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+    }
+  }
+
+  onTouchEnd() {
+    if (this.pullDistance > 50) {
+      this.refreshData();
+    }
+    this.startY = 0;
+    this.pullDistance = 0;
+  }
+
+  refreshData() {
+    this.isRefreshing = true;
+    this.loadMenus();
+    this.loadFoods();
+    setTimeout(() => {
+      this.isRefreshing = false;
+    }, 1000);
   }
 
   loadFoods() {
     this.foodService.getFoodListRealtime(foods => {
       this.foods = foods;
-      this.filteredFoods = foods;
     });
   }
 
   loadMenus() {
     this.menuService.getMenuListRealtime(menus => {
       this.menus = menus;
+      this.filterMenus();
     });
   }
 
-  onFoodSearchChange() {
-    const term = this.foodSearchTerm.toLowerCase();
-    this.filteredFoods = this.foods.filter(food =>
-      food.name.toLowerCase().includes(term)
-    );
+  onMenuSearch(event: any) {
+    this.menuSearchQuery = event.target.value;
+    this.filterMenus();
   }
 
-  displayFoodName(food: Food): string {
-    return food ? food.name : '';
-  }
-
-  onFoodSelected(event: any) {
-    this.selectedFood = event.option.value;
-  }
-
-  addIngredient() {
-    if (!this.selectedFood || this.ingredientQuantity <= 0) {
-      this.snackBar.open('Please select a food and enter a valid quantity', 'Close', { duration: 3000 });
-      return;
-    }
-
-    this.currentMenuIngredients.push({
-      foodId: this.selectedFood.id,
-      quantity: this.ingredientQuantity,
-      food: this.selectedFood,
-    });
-
-    // Reset
-    this.selectedFood = null;
-    this.foodSearchTerm = '';
-    this.ingredientQuantity = 0;
-    this.filteredFoods = this.foods;
-  }
-
-  removeIngredient(index: number) {
-    this.currentMenuIngredients.splice(index, 1);
-  }
-
-  calculateMenuMacros() {
-    let kcal = 0, protein = 0, carb = 0, fat = 0;
-    this.currentMenuIngredients.forEach(item => {
-      if (item.food) {
-        const factor = item.quantity / item.food.servingSize;
-        kcal += item.food.kcal * factor;
-        protein += item.food.protein * factor;
-        carb += item.food.carb * factor;
-        fat += item.food.fat * factor;
-      }
-    });
-    return { kcal, protein, carb, fat };
-  }
-
-  async saveMenu() {
-    if (!this.newMenuName || this.currentMenuIngredients.length === 0) {
-      this.snackBar.open('Please enter a menu name and add at least one ingredient', 'Close', { duration: 3000 });
-      return;
-    }
-
-    const menuData: Menu = {
-      name: this.newMenuName,
-      ingredients: this.currentMenuIngredients.map(item => ({
-        foodId: item.foodId,
-        quantity: item.quantity,
-      })),
-    };
-
-    try {
-      await this.menuService.addMenu(menuData);
-      this.snackBar.open(`Successfully saved "${this.newMenuName}"`, 'Close', { duration: 3000 });
-      this.newMenuName = '';
-      this.currentMenuIngredients = [];
-    } catch (error) {
-      console.error('Error saving menu:', error);
-      this.snackBar.open('Failed to save menu. Please try again.', 'Close', { duration: 3000 });
+  filterMenus() {
+    if (!this.menuSearchQuery) {
+      this.filteredMenus = this.menus;
+    } else {
+      const query = this.menuSearchQuery.toLowerCase();
+      this.filteredMenus = this.menus.filter(menu => menu.name.toLowerCase().includes(query));
     }
   }
 
+  displayEmpty(value: any): string {
+    return '';
+  }
+  onMenuSelected(event: any) {
+    const menuId = event.option.value;
+    if (!this.selectedMenuIds.includes(menuId)) {
+      this.selectedMenuIds.push(menuId);
+      this.onMenuSelectChange();
+    }
+    this.menuSearchQuery = '';
+    this.filterMenus();
+  }
   onMenuSelectChange() {
     this.plannedMenus = this.selectedMenuIds.map(id => {
       const menu = this.menus.find(m => m.id === id);
@@ -145,9 +144,42 @@ export class MenuPlanComponent implements OnInit {
     }).filter(m => m !== null) as any;
   }
 
-  openAddMenuDialog() {
-    console.log('Open Add Menu Dialog');
-    this.snackBar.open('Add Menu Dialog feature is coming soon!', 'Close', { duration: 3000 });
+  openCreateMenuDialog() {
+    const dialogRef = this.dialog.open(CreateMenuComponent, {
+      width: '500px',
+      maxHeight: '90vh',
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loadMenus(); // Reload menus if saved
+      }
+    });
+  }
+
+  calculateItemMacros(item: any) {
+    if (!item.food) return { kcal: 0, protein: 0, carb: 0, fat: 0 };
+    const factor = item.quantity / item.food.servingSize;
+    return {
+      kcal: item.food.kcal * factor,
+      protein: item.food.protein * factor,
+      carb: item.food.carb * factor,
+      fat: item.food.fat * factor
+    };
+  }
+
+  openEditMenuDialog(menu: any) {
+    const dialogRef = this.dialog.open(CreateMenuComponent, {
+      width: '500px',
+      maxHeight: '90vh',
+      data: { menu }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loadMenus(); // Reload menus if saved
+      }
+    });
   }
 
   calculatePlanTotals() {

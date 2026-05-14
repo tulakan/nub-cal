@@ -1,108 +1,17 @@
-<div class="container mx-auto p-2 space-y-2">
+<div class="container mx-auto p-2 space-y-2"
+     (touchstart)="onTouchStart($event)" 
+     (touchmove)="onTouchMove($event)" 
+     (touchend)="onTouchEnd()">
 
-  <!-- Section 1: Create Menu -->
-  <mat-card class="p-2 bg-surface shadow rounded-lg">
-    <mat-card-header class="flex flex-row justify-between items-center w-full">
-      <div>
-        <mat-card-title class="text-base">Create New Menu</mat-card-title>
-        <mat-card-subtitle class="text-xs">Define a menu template by adding ingredients</mat-card-subtitle>
-      </div>
-      <button mat-icon-button (click)="openAddMenuDialog()" class="ml-auto">
-        <mat-icon>add</mat-icon>
-      </button>
-    </mat-card-header>
-    <mat-card-content class="space-y-2 mt-2">
-      <!-- Menu Name -->
-      <mat-form-field class="w-full" appearance="outline">
-        <mat-label>Menu Name</mat-label>
-        <input matInput [(ngModel)]="newMenuName" placeholder="e.g., Basil Chicken">
-      </mat-form-field>
+  <!-- Pull to Refresh Indicator -->
+  <div class="text-center rounded-lg" [style.height.px]="pullDistance" style="overflow: hidden; background-color: var(--c-gray-100); transition: height 0.1s;" [style.transition]="pullDistance === 0 ? 'height 0.3s' : 'none'">
+    <div class="flex items-center justify-center h-full">
+      <mat-spinner diameter="20" *ngIf="isRefreshing"></mat-spinner>
+      <mat-icon *ngIf="!isRefreshing" [style.transform]="'rotate(' + (pullDistance * 3.6) + 'deg)'" [style.opacity]="pullDistance / 80">arrow_downward</mat-icon>
+    </div>
+  </div>
 
-      <!-- Add Ingredient Form -->
-      <div class="flex flex-row gap-1 items-end w-full">
-        <mat-form-field appearance="outline" class="flex-1">
-          <mat-label>Select Food</mat-label>
-          <input type="text"
-                 placeholder="Type to search..."
-                 aria-label="Food"
-                 matInput
-                 [(ngModel)]="foodSearchTerm"
-                 (ngModelChange)="onFoodSearchChange()"
-                 [matAutocomplete]="auto"
-                 autocomplete="off">
-          <mat-autocomplete #auto="matAutocomplete" [displayWith]="displayFoodName" (optionSelected)="onFoodSelected($event)">
-            <mat-option *ngFor="let food of filteredFoods" [value]="food" class="food-dropdown-option">
-              <div class="food-option-content">
-                <div class="food-name">{{ food.name }}</div>
-                <div class="food-info">
-                  {{ food.kcal }} kcal | P: {{ food.protein }}g | C: {{ food.carb }}g | F: {{ food.fat }}g per {{ food.servingSize }}{{ food.unit }}
-                </div>
-              </div>
-            </mat-option>
-          </mat-autocomplete>
-        </mat-form-field>
 
-        <mat-form-field appearance="outline" class="w-24">
-          <mat-label>Qty</mat-label>
-          <input matInput type="number" [(ngModel)]="ingredientQuantity" placeholder="Amount">
-          <span matSuffix *ngIf="selectedFood" class="text-xs text-secondary">{{selectedFood.unit}}</span>
-        </mat-form-field>
-
-        <button mat-mini-fab color="primary" (click)="addIngredient()" class="flex-shrink-0 custom-mini-fab" [disabled]="!selectedFood || ingredientQuantity <= 0">
-          <mat-icon>add</mat-icon>
-        </button>
-      </div>
-
-      <!-- Current Ingredients List -->
-      <div *ngIf="currentMenuIngredients.length > 0" class="mt-2">
-        <h3 class="text-sm font-semibold mb-1">Ingredients</h3>
-        <div class="space-y-1">
-          <div *ngFor="let item of currentMenuIngredients; let i = index" class="flex flex-row justify-between items-center p-1 bg-background rounded gap-2">
-            <div class="flex-1">
-              <span class="font-medium text-xs">{{item.food?.name}}</span>
-            </div>
-            <div class="w-16 text-right">
-              <span class="text-xs text-secondary">{{item.quantity}} {{item.food?.unit}}</span>
-            </div>
-            <div class="w-12 text-right">
-              <span class="text-xs font-medium">{{ (item.food?.kcal || 0) * (item.quantity / (item.food?.servingSize || 1)) | number:'1.0-0' }}</span>
-            </div>
-            <button mat-icon-button color="warn" (click)="removeIngredient(i)" class="flex-shrink-0 h-8 w-8 leading-none">
-              <mat-icon class="text-sm">delete</mat-icon>
-            </button>
-          </div>
-        </div>
-
-        <!-- Menu Totals -->
-        <div class="mt-2 p-2 rounded" style="background-color: var(--c-gray-100); border: var(--border);">
-          <div class="grid grid-cols-4 gap-1 text-center text-xs">
-            <div>
-              <div class="text-secondary">KCal</div>
-              <div class="font-bold text-sm">{{calculateMenuMacros().kcal | number:'1.0-0'}}</div>
-            </div>
-            <div>
-              <div class="text-secondary">Protein</div>
-              <div class="font-bold text-sm">{{calculateMenuMacros().protein | number:'1.0-1'}}g</div>
-            </div>
-            <div>
-              <div class="text-secondary">Carbs</div>
-              <div class="font-bold text-sm">{{calculateMenuMacros().carb | number:'1.0-1'}}g</div>
-            </div>
-            <div>
-              <div class="text-secondary">Fat</div>
-              <div class="font-bold text-sm">{{calculateMenuMacros().fat | number:'1.0-1'}}g</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="flex justify-end mt-4">
-        <button mat-raised-button color="primary" (click)="saveMenu()" [disabled]="!newMenuName || currentMenuIngredients.length === 0">
-          <mat-icon>save</mat-icon> Save Menu
-        </button>
-      </div>
-    </mat-card-content>
-  </mat-card>
 
   <!-- Section 2: Daily Plan -->
   <mat-card class="p-2 bg-surface shadow rounded-lg">
@@ -112,31 +21,45 @@
     </mat-card-header>
     <mat-card-content class="space-y-2 mt-2">
       <!-- Select Menus -->
-      <mat-form-field class="w-full" appearance="outline">
-        <mat-label>Select Menus for Today</mat-label>
-        <mat-select [(ngModel)]="selectedMenuIds" multiple (selectionChange)="onMenuSelectChange()">
-          <mat-option *ngFor="let menu of menus" [value]="menu.id">
+      <mat-form-field class="w-full" appearance="fill">
+        <mat-label>Search Menus</mat-label>
+        <input type="text" matInput [(ngModel)]="menuSearchQuery" (ngModelChange)="filterMenus()" [matAutocomplete]="auto" placeholder="Type to search menus...">
+        <mat-autocomplete #auto="matAutocomplete" [displayWith]="displayEmpty" (optionSelected)="onMenuSelected($event)">
+          <mat-option *ngFor="let menu of filteredMenus" [value]="menu.id">
             {{menu.name}}
           </mat-option>
-        </mat-select>
+        </mat-autocomplete>
       </mat-form-field>
 
       <!-- Planned Menus Details -->
-      <div *ngIf="plannedMenus.length > 0" class="space-y-6 mt-4">
-        <div *ngFor="let menu of plannedMenus" class="p-3 bg-background rounded-lg">
-          <h3 class="text-lg font-semibold mb-2">{{menu.name}}</h3>
-          <div class="space-y-2">
-            <div *ngFor="let item of menu.ingredients" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-              <div>
-                <span class="font-medium">{{item.food?.name}}</span>
-                <span class="text-sm text-secondary ml-2">(Base: {{item.food?.servingSize}}{{item.food?.unit}})</span>
+      <div *ngIf="plannedMenus.length > 0" class="space-y-2 mt-2">
+        <div *ngFor="let menu of plannedMenus" class="p-2 bg-gray-50 rounded-lg mb-2">
+          <div class="flex justify-between items-center mb-1">
+            <div class="text-base font-semibold">{{menu.name}}</div>
+            <button mat-icon-button (click)="openEditMenuDialog(menu)">
+              <mat-icon>edit</mat-icon>
+            </button>
+          </div>
+          <div class="space-y-1">
+            <div *ngFor="let item of menu.ingredients" class="border-b last:border-b-0 py-1">
+              <div class="flex flex-row justify-between items-center w-full">
+                <div class="flex-1">
+                  <span class="font-medium text-sm">{{item.food?.name}}</span>
+                  <span class="text-xs text-secondary ml-1">(Base: {{item.food?.servingSize}}{{item.food?.unit}})</span>
+                </div>
+                <div class="flex flex-row items-center gap-1">
+                  <mat-form-field appearance="fill" class="w-24 compact-field">
+                    <input matInput type="number" [(ngModel)]="item.quantity" (ngModelChange)="calculatePlanTotals()">
+                    <span matSuffix class="text-xs text-secondary">{{item.food?.unit}}</span>
+                  </mat-form-field>
+                </div>
               </div>
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>Quantity ({{item.food?.unit}})</mat-label>
-                <input matInput type="number" [(ngModel)]="item.quantity" (ngModelChange)="calculatePlanTotals()">
-              </mat-form-field>
-              <div class="text-right">
-                <span class="font-bold">{{ (item.food?.kcal || 0) * (item.quantity / (item.food?.servingSize || 1)) | number:'1.0-0' }}</span> kcal
+              
+              <div class="text-xs text-secondary mt-1">
+                {{ calculateItemMacros(item).kcal | number:'1.0-0' }} kcal | 
+                {{ calculateItemMacros(item).protein | number:'1.0-1' }}g P | 
+                {{ calculateItemMacros(item).carb | number:'1.0-1' }}g C | 
+                {{ calculateItemMacros(item).fat | number:'1.0-1' }}g F
               </div>
             </div>
           </div>
@@ -144,27 +67,35 @@
 
         <!-- Grand Totals -->
         <div class="p-2 rounded-lg" style="background-color: var(--c-gray-100); color: var(--c-gray-800); border: var(--border);">
-          <h3 class="text-sm font-semibold mb-2 text-center">Total for the Day</h3>
+          <div class="text-sm font-semibold text-center">Total for the Day</div>
           <div class="grid grid-cols-4 gap-1 text-center">
             <div>
               <div class="text-secondary text-xs">KCal</div>
               <div class="text-base font-bold">{{calculatePlanTotals().kcal | number:'1.0-0'}}</div>
+              <div class="text-xs text-secondary">/ {{targetMacros.kcal}}</div>
             </div>
             <div>
               <div class="text-secondary text-xs">Protein</div>
               <div class="text-base font-bold">{{calculatePlanTotals().protein | number:'1.0-1'}}g</div>
+              <div class="text-xs text-secondary">/ {{targetMacros.protein}}g</div>
             </div>
             <div>
               <div class="text-secondary text-xs">Carbs</div>
               <div class="text-base font-bold">{{calculatePlanTotals().carb | number:'1.0-1'}}g</div>
+              <div class="text-xs text-secondary">/ {{targetMacros.carb}}g</div>
             </div>
             <div>
               <div class="text-secondary text-xs">Fat</div>
               <div class="text-base font-bold">{{calculatePlanTotals().fat | number:'1.0-1'}}g</div>
+              <div class="text-xs text-secondary">/ {{targetMacros.fat}}g</div>
             </div>
           </div>
         </div>
       </div>
     </mat-card-content>
   </mat-card>
+  <!-- Floating Action Button -->
+  <button mat-fab color="primary" class="fab-btn" (click)="openCreateMenuDialog()">
+    <mat-icon>add</mat-icon>
+  </button>
 </div>
