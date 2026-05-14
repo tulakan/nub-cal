@@ -99,7 +99,7 @@ import { ThemeService } from '../../shared/services/theme.service';
     .content-container {
       flex-grow: 1;
       width: 100%;
-      padding: 4px;
+      padding: var(--space-xs);
       overflow-y: scroll;
     }
 
@@ -114,7 +114,7 @@ import { ThemeService } from '../../shared/services/theme.service';
 
     .bottom-nav {
       display: flex;
-      gap: 12px;
+      gap: var(--space-md);
       width: 100%;
       max-width: 400px;
       justify-content: space-evenly;
@@ -132,7 +132,7 @@ export class MainComponent {
     if (url.includes('food-list')) return 'Food List';
     if (url.includes('body-composition')) return 'Body Composition';
     if (url.includes('circumference')) return 'Circumference';
-    return 'Nub KCal';
+    return 'Nub Cal';
   }
 
   constructor(public themeService: ThemeService) {}

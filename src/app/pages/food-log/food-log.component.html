@@ -74,40 +74,22 @@
       <div
         class="logged-food-item"
         *ngFor="let loggedFood of loggedFoods(); let i = index"
+        cdkDrag
+        cdkDragLockAxis="x"
+        (cdkDragEnded)="onDragEnded($event, i)"
       >
-        <div class="food-details">
-          <h4 class="food-name">{{ loggedFood.food.name }}</h4>
-          <p class="serving-info">
-            {{ loggedFood.servingSize }}{{ loggedFood.food.unit }}
-            <span class="base-serving"
-              >(Base: {{ loggedFood.food.servingSize
-              }}{{ loggedFood.food.unit }})</span
-            >
-          </p>
-          <div class="nutrition-summary">
-            <span class="nutrition-badge calories"
-              >{{ loggedFood.calculatedNutrition.kcal }}kcal</span
-            >
-            <span class="nutrition-badge protein"
-              >{{ loggedFood.calculatedNutrition.protein }}g protein</span
-            >
-            <span class="nutrition-badge carbs"
-              >{{ loggedFood.calculatedNutrition.carb }}g carbs</span
-            >
-            <span class="nutrition-badge fat"
-              >{{ loggedFood.calculatedNutrition.fat }}g fat</span
-            >
-          </div>
+        <div class="food-item-line line-1">
+          <span class="food-name">{{ loggedFood.food.name }}</span>
+          <span class="food-unit">{{ loggedFood.servingSize }}{{ loggedFood.food.unit }}</span>
         </div>
-        <div class="food-actions">
-          <button
-            mat-icon-button
-            color="warn"
-            (click)="removeFood(i)"
-            matTooltip="Remove from log"
-          >
-            <mat-icon>delete</mat-icon>
-          </button>
+        
+        <div class="food-item-line line-2">
+          <div class="nutrition-summary-text">
+            {{ loggedFood.calculatedNutrition.kcal }} kcal | 
+            {{ loggedFood.calculatedNutrition.protein }}g protein | 
+            {{ loggedFood.calculatedNutrition.carb }}g carb | 
+            {{ loggedFood.calculatedNutrition.fat }}g fat
+          </div>
         </div>
       </div>
     </div>

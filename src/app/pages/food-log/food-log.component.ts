@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 import {
   Component,
   computed,
@@ -23,7 +24,7 @@ import { StoreService } from '../../stores/store.service';
 @Component({
   selector: 'app-food-log',
   standalone: true,
-  imports: [MaterialModule, CommonModule],
+  imports: [MaterialModule, CommonModule, DragDropModule],
   templateUrl: './food-log.component.html',
   styleUrls: ['./food-log.component.scss'],
 })
@@ -128,6 +129,15 @@ export class FoodLogPage implements OnInit {
       this.snackBar.open(`${foodName} removed from your log`, 'Close', {
         duration: 2000,
       });
+    }
+  }
+
+  onDragEnded(event: any, index: number) {
+    const distance = event.distance.x;
+    if (Math.abs(distance) > 100) {
+      this.removeFood(index);
+    } else {
+      event.source.reset();
     }
   }
 

@@ -145,6 +145,11 @@ export class MenuPlanComponent implements OnInit {
     }).filter(m => m !== null) as any;
   }
 
+  openAddMenuDialog() {
+    console.log('Open Add Menu Dialog');
+    this.snackBar.open('Add Menu Dialog feature is coming soon!', 'Close', { duration: 3000 });
+  }
+
   calculatePlanTotals() {
     let kcal = 0, protein = 0, carb = 0, fat = 0;
     this.plannedMenus.forEach(menu => {

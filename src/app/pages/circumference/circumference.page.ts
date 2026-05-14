@@ -188,7 +188,7 @@ echarts.use([
   `,
   styles: `
     .container {
-      padding: 16px;
+      padding: var(--space-lg);
       position: relative;
       min-height: calc(100vh - 100px);
       box-sizing: border-box;
@@ -208,7 +208,7 @@ echarts.use([
     }
     .main-sections {
       display: flex;
-      gap: 20px;
+      gap: var(--space-md);
       align-items: flex-start;
       width: 100%;
     }
@@ -216,7 +216,7 @@ echarts.use([
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: var(--space-md);
       width: 100%;
     }
     .progress-card {
@@ -228,7 +228,7 @@ echarts.use([
       width: 100%;
       background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
       color: white;
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       overflow: hidden;
     }
     .latest-data-card .mat-mdc-card-header .mat-mdc-card-title {
@@ -240,15 +240,15 @@ echarts.use([
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-      gap: 12px;
-      margin-top: 16px;
+      gap: var(--space-md);
+      margin-top: var(--space-md);
     }
     .stat-item {
       text-align: center;
-      padding: 12px;
-      border-radius: 8px;
-      background-color: #f9f9f9;
-      border: 1px solid #eaeaea;
+      padding: var(--space-md);
+      border-radius: var(--radius-md);
+      background-color: var(--c-gray-100);
+      border: var(--border);
     }
     .latest-data-card .stat-item {
       background-color: rgba(255, 255, 255, 0.95);
@@ -256,7 +256,7 @@ echarts.use([
     }
     .stat-label {
       font-size: 11px;
-      color: #666;
+      color: var(--c-gray-600);
       margin-bottom: 4px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -264,16 +264,16 @@ echarts.use([
     .stat-value {
       font-size: 16px;
       font-weight: 700;
-      color: #1a1a1a;
+      color: var(--c-black);
     }
     .stat-value.positive {
-      color: #10b981;
+      color: var(--c-positive);
     }
     .stat-value.negative {
-      color: #ef4444;
+      color: var(--c-negative);
     }
     .stat-value.latest {
-      color: #000;
+      color: var(--c-black);
       font-size: 18px;
     }
     .chart-item {
@@ -287,14 +287,14 @@ echarts.use([
       bottom: 80px;
       right: 20px;
       z-index: 1000;
-      background-color: #000;
-      color: #fff;
+      background-color: var(--c-black);
+      color: var(--c-white);
     }
 
     /* Responsive design for smaller screens */
     @media (max-width: 1024px) {
       .container {
-        padding: 12px;
+        padding: var(--space-md);
       }
       .stats-grid {
         grid-template-columns: repeat(3, 1fr);
@@ -303,17 +303,17 @@ echarts.use([
 
     @media (max-width: 600px) {
       .container {
-        padding: 4px;
+        padding: var(--space-xs);
       }
       .stats-grid {
         grid-template-columns: repeat(3, 1fr);
-        gap: 4px;
+        gap: var(--space-xs);
       }
       .chart-item {
         height: 260px;
       }
       .stat-item {
-        padding: 4px;
+        padding: var(--space-xs);
       }
       .stat-label {
         font-size: 11px;

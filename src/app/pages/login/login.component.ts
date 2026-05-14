@@ -12,13 +12,13 @@ import { StoreService } from '../../stores/store.service';
   template: `
     <div class="full-page-container">
       <mat-card class="login-card">
-        <div class="app-title">NUB R HAN</div>
+        <div class="app-title">Nub Cal</div>
         <form
           class="login-form"
           [formGroup]="loginForm"
           (ngSubmit)="onSubmit()"
         >
-          <mat-form-field appearance="fill" class="form-field email">
+          <mat-form-field appearance="outline" class="form-field email">
             <mat-label>Email</mat-label>
             <input
               matInput
@@ -26,7 +26,7 @@ import { StoreService } from '../../stores/store.service';
               formControlName="email"
             />
           </mat-form-field>
-          <mat-form-field appearance="fill" class="form-field password">
+          <mat-form-field appearance="outline" class="form-field password">
             <mat-label>Password</mat-label>
             <input
               matInput
@@ -50,13 +50,13 @@ import { StoreService } from '../../stores/store.service';
       display: flex;
       justify-content: center;
       align-items: center;
-      background: var(--bg-gradient);
+      background: var(--background-color);
     }
 
     .login-card {
       width: 100%;
       max-width: 400px;
-      padding: 12px;
+      padding: var(--space-lg);
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -69,16 +69,18 @@ import { StoreService } from '../../stores/store.service';
       flex-direction: column;
       justify-content: center;
       align-items: center;
+      gap: var(--space-sm);
     }
 
     .form-field {
       width: 100%;
     }
     .app-title {
-      font-size: 20px;
-      font-weight: bold;
+      font-size: 24px;
+      font-weight: 700;
       text-align: center;
-      margin-bottom: 8px;
+      margin-bottom: var(--space-lg);
+      color: var(--c-black);
     }
   `,
 })
