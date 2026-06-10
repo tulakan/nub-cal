@@ -28,8 +28,8 @@ export class FoodService {
       collection(this.firebaseService.db, 'foods')
     );
     return querySnapshot.docs.map(doc => ({
-      id: doc.id,
       ...doc.data(),
+      id: doc.id,
     }));
   }
 
@@ -39,7 +39,7 @@ export class FoodService {
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() };
+      return { ...docSnap.data(), id: docSnap.id };
     } else {
       console.log('No such document!');
       return null;
@@ -57,8 +57,8 @@ export class FoodService {
 
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({
-      id: doc.id,
       ...doc.data(),
+      id: doc.id,
     }));
   }
 
@@ -68,8 +68,8 @@ export class FoodService {
       collection(this.firebaseService.db, 'foods'),
       querySnapshot => {
         const foods = querySnapshot.docs.map(doc => ({
-          id: doc.id,
           ...doc.data(),
+          id: doc.id,
         }));
         callback(foods);
       },

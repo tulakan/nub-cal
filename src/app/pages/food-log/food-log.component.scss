@@ -90,24 +90,16 @@
   border: var(--border);
   border-radius: var(--radius-md);
   background-color: var(--c-white);
-  cursor: grab;
   user-select: none;
+  cursor: pointer;
+  transition: background-color 200ms ease;
 
-  &:active {
-    cursor: grabbing;
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.02);
   }
 
-  &.cdk-drag-preview {
-    box-shadow: var(--shadow-lg);
-    opacity: 0.9;
-  }
-
-  &.cdk-drag-placeholder {
-    opacity: 0.3;
-  }
-
-  &.cdk-drag-animating {
-    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+  &.expanded {
+    background-color: rgba(0, 0, 0, 0.04);
   }
 }
 
@@ -115,10 +107,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-xs);
   width: 100%;
   
   &.line-1 {
     margin-bottom: 2px;
+  }
+
+  &.line-2 {
+    align-items: flex-end;
   }
 }
 
@@ -137,6 +134,45 @@
 .nutrition-summary-text {
   font-size: 12px;
   color: var(--c-gray-600);
+  flex: 1;
+}
+
+.food-item-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: var(--border);
+  animation: slideDown 200ms ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.delete-action-btn {
+  width: 100%;
+  background-color: var(--c-negative) !important;
+  color: white !important;
+  font-size: 12px;
+
+  mat-icon {
+    margin-right: var(--space-xs);
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    background-color: #dc2626 !important;
+  }
 }
 
 .food-actions {

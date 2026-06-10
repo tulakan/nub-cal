@@ -73,10 +73,9 @@
     <div class="logged-foods">
       <div
         class="logged-food-item"
+        [class.expanded]="expandedIndex() === i"
         *ngFor="let loggedFood of loggedFoods(); let i = index"
-        cdkDrag
-        cdkDragLockAxis="x"
-        (cdkDragEnded)="onDragEnded($event, i)"
+        (click)="toggleExpanded(i)"
       >
         <div class="food-item-line line-1">
           <span class="food-name">{{ loggedFood.food.name }}</span>
@@ -90,6 +89,17 @@
             {{ loggedFood.calculatedNutrition.carb }}g carb | 
             {{ loggedFood.calculatedNutrition.fat }}g fat
           </div>
+        </div>
+
+        <div class="food-item-actions" *ngIf="expandedIndex() === i">
+          <button
+            mat-raised-button
+            class="delete-action-btn"
+            (click)="confirmDelete(i); $event.stopPropagation()"
+          >
+            <mat-icon>delete</mat-icon>
+            Delete
+          </button>
         </div>
       </div>
     </div>

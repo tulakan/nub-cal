@@ -27,6 +27,20 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'menu-create',
+        loadComponent: () =>
+          import('./dialogs/create-menu/create-menu.component').then(
+            m => m.CreateMenuComponent
+          ),
+      },
+      {
+        path: 'menu-edit/:id',
+        loadComponent: () =>
+          import('./dialogs/create-menu/create-menu.component').then(
+            m => m.CreateMenuComponent
+          ),
+      },
+      {
         path: 'food-list',
         loadComponent: () =>
           import('./pages/food-list/food-list.component').then(

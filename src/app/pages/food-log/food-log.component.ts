@@ -1,5 +1,4 @@
 import { CommonModule } from '@angular/common';
-import { DragDropModule } from '@angular/cdk/drag-drop';
 import {
   Component,
   computed,
@@ -12,6 +11,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AddFoodComponent } from '../../dialogs/add-food/add-food.component';
 import { TargetDialogComponent } from '../../dialogs/target-dialog/target-dialog.component';
+import { ConfirmDeleteDialogComponent } from './confirm-delete.dialog';
 import { Food } from '../../shared/interface/food.interface';
 import {
   LoggedFood,
@@ -24,7 +24,7 @@ import { StoreService } from '../../stores/store.service';
 @Component({
   selector: 'app-food-log',
   standalone: true,
-  imports: [MaterialModule, CommonModule, DragDropModule],
+  imports: [MaterialModule, CommonModule],
   templateUrl: './food-log.component.html',
   styleUrls: ['./food-log.component.scss'],
 })
@@ -53,6 +53,7 @@ export class FoodLogPage implements OnInit {
   loggedFoods = signal<LoggedFood[]>([]);
   allFoods = signal<Food[]>([]);
   filteredFoods = signal<Food[]>([]);
+  expandedIndex = signal<number | null>(null);
 
   // Computed values
   totalConsumed = computed(() => {
@@ -124,21 +125,35 @@ export class FoodLogPage implements OnInit {
     const foodName = this.loggedFoods()[index]?.food.name;
     this.loggedFoods.update(foods => foods.filter((_, i) => i !== index));
     this.saveToLocalStorage();
+    this.expandedIndex.set(null);
 
     if (foodName) {
-      this.snackBar.open(`${foodName} removed from your log`, 'Close', {
-        duration: 2000,
+      this.snackBar.open(`${foodName} removed from your log`, 'Undo', {
+        duration: 3000,
       });
     }
   }
 
-  onDragEnded(event: any, index: number) {
-    const distance = event.distance.x;
-    if (Math.abs(distance) > 100) {
-      this.removeFood(index);
-    } else {
-      event.source.reset();
-    }
+  toggleExpanded(index: number) {
+    this.expandedIndex.set(this.expandedIndex() === index ? null : index);
+  }
+
+  confirmDelete(index: number) {
+    const food = this.loggedFoods()[index];
+    if (!food) return;
+
+    const dialogRef = this.dialog.open(ConfirmDeleteDialogComponent, {
+      width: '280px',
+      maxWidth: '90vw',
+      disableClose: false,
+      data: { foodName: food.food.name },
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === true) {
+        this.removeFood(index);
+      }
+    });
   }
 
   openTargetDialog() {

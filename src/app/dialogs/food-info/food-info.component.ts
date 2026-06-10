@@ -117,7 +117,7 @@ export class FoodInfoComponent implements OnInit {
     if (this.foodForm.valid) {
       const formValue = this.foodForm.value;
       const foodData: Food = {
-        id: this.isEdit ? this.data.food!.id : '',
+        id: this.isEdit && this.data.food?.id ? this.data.food.id : '',
         name: formValue.name.trim(),
         kcal: Number(formValue.kcal),
         protein: Number(formValue.protein),

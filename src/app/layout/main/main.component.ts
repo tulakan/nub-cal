@@ -128,6 +128,8 @@ export class MainComponent {
   get pageTitle(): string {
     const url = this.router.url;
     if (url.includes('food-log')) return 'Food Log';
+    if (url.includes('menu-create')) return 'Create Menu';
+    if (url.includes('menu-edit')) return 'Edit Menu';
     if (url.includes('menu-plan')) return 'Menu & Plan';
     if (url.includes('food-list')) return 'Food List';
     if (url.includes('body-composition')) return 'Body Composition';

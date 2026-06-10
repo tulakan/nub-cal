@@ -1,101 +1,223 @@
-<div class="container mx-auto p-2 space-y-2"
-     (touchstart)="onTouchStart($event)" 
-     (touchmove)="onTouchMove($event)" 
-     (touchend)="onTouchEnd()">
-
+<div
+  class="menu-plan-container"
+  (touchstart)="onTouchStart($event)"
+  (touchmove)="onTouchMove($event)"
+  (touchend)="onTouchEnd()"
+>
   <!-- Pull to Refresh Indicator -->
-  <div class="text-center rounded-lg" [style.height.px]="pullDistance" style="overflow: hidden; background-color: var(--c-gray-100); transition: height 0.1s;" [style.transition]="pullDistance === 0 ? 'height 0.3s' : 'none'">
+  <div
+    class="pull-refresh-indicator"
+    [style.height.px]="pullDistance"
+    [style.transition]="pullDistance === 0 ? 'height 0.3s' : 'none'"
+  >
     <div class="flex items-center justify-center h-full">
       <mat-spinner diameter="20" *ngIf="isRefreshing"></mat-spinner>
-      <mat-icon *ngIf="!isRefreshing" [style.transform]="'rotate(' + (pullDistance * 3.6) + 'deg)'" [style.opacity]="pullDistance / 80">arrow_downward</mat-icon>
+      <mat-icon
+        *ngIf="!isRefreshing"
+        [style.transform]="'rotate(' + pullDistance * 3.6 + 'deg)'"
+        [style.opacity]="pullDistance / 80"
+        >arrow_downward</mat-icon
+      >
     </div>
   </div>
 
+  <!-- Tab Navigation -->
+  <div class="tab-nav">
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'menus'"
+      (click)="activeTab = 'menus'"
+    >
+      Menus
+    </button>
+    <button
+      class="tab-btn"
+      [class.active]="activeTab === 'today'"
+      (click)="activeTab = 'today'"
+    >
+      Today
+    </button>
+  </div>
 
+  <!-- Main Content -->
+  <div class="content-section">
+    <!-- Menus Tab -->
+    <div *ngIf="activeTab === 'menus'" class="tab-content">
+      <!-- Search Menus -->
+      <div class="search-box">
+        <mat-icon class="search-icon">search</mat-icon>
+        <input
+          type="text"
+          [(ngModel)]="menuSearchQuery"
+          (ngModelChange)="filterMenus()"
+          placeholder="ค้นหารายการอาหาร..."
+          class="search-input"
+        />
+      </div>
 
-  <!-- Section 2: Daily Plan -->
-  <mat-card class="p-2 bg-surface shadow rounded-lg">
-    <mat-card-header>
-      <mat-card-title class="text-base">Daily Plan</mat-card-title>
-      <mat-card-subtitle class="text-xs">Select menus and adjust quantities for the day</mat-card-subtitle>
-    </mat-card-header>
-    <mat-card-content class="space-y-2 mt-2">
-      <!-- Select Menus -->
-      <mat-form-field class="w-full" appearance="fill">
-        <mat-label>Search Menus</mat-label>
-        <input type="text" matInput [(ngModel)]="menuSearchQuery" (ngModelChange)="filterMenus()" [matAutocomplete]="auto" placeholder="Type to search menus...">
-        <mat-autocomplete #auto="matAutocomplete" [displayWith]="displayEmpty" (optionSelected)="onMenuSelected($event)">
-          <mat-option *ngFor="let menu of filteredMenus" [value]="menu.id">
-            {{menu.name}}
-          </mat-option>
-        </mat-autocomplete>
-      </mat-form-field>
+      <!-- Filtered Menus List -->
+      <div class="menus-list" *ngIf="filteredMenus.length > 0">
+        <div
+          *ngFor="let menu of filteredMenus"
+          class="menu-item-wrapper"
+          (click)="openEditMenuDialog(menu)"
+        >
+          <div class="menu-item-content">
+            <div class="menu-item-name">{{ menu.name }}</div>
+            <div class="menu-item-meta">
+              {{ menu.ingredients.length }} ingredients
+            </div>
+          </div>
+          <mat-icon class="menu-chevron">chevron_right</mat-icon>
+          <button
+            mat-icon-button
+            class="menu-delete-btn"
+            (click)="deleteMenu(menu.id); $event.stopPropagation()"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </div>
 
-      <!-- Planned Menus Details -->
-      <div *ngIf="plannedMenus.length > 0" class="space-y-2 mt-2">
-        <div *ngFor="let menu of plannedMenus" class="p-2 bg-gray-50 rounded-lg mb-2">
-          <div class="flex justify-between items-center mb-1">
-            <div class="text-base font-semibold">{{menu.name}}</div>
-            <button mat-icon-button (click)="openEditMenuDialog(menu)">
-              <mat-icon>edit</mat-icon>
+      <!-- Empty State -->
+      <div *ngIf="filteredMenus.length === 0" class="empty-state">
+        <mat-icon>restaurant</mat-icon>
+        <div class="empty-state-text">No menus found</div>
+      </div>
+
+      <!-- Create New Menu Button -->
+      <button
+        mat-raised-button
+        class="create-menu-btn"
+        (click)="openCreateMenuDialog()"
+      >
+        <mat-icon>add</mat-icon>
+        Create New Menu
+      </button>
+    </div>
+
+    <!-- Today Tab -->
+    <div *ngIf="activeTab === 'today'" class="tab-content">
+      <!-- Planned Items -->
+      <div *ngIf="plannedMenus.length > 0" class="planned-items">
+        <!-- Group items by menu -->
+        <div
+          *ngFor="let menu of plannedMenus; let menuIdx = index"
+          class="menu-group"
+        >
+          <!-- Menu Name Header -->
+          <div class="menu-header-wrapper">
+            <div class="menu-header">{{ menu.name }}</div>
+            <button
+              mat-icon-button
+              class="menu-header-delete-btn"
+              (click)="removeMenu(menuIdx)"
+            >
+              <mat-icon>delete</mat-icon>
             </button>
           </div>
-          <div class="space-y-1">
-            <div *ngFor="let item of menu.ingredients" class="border-b last:border-b-0 py-1">
-              <div class="flex flex-row justify-between items-center w-full">
-                <div class="flex-1">
-                  <span class="font-medium text-sm">{{item.food?.name}}</span>
-                  <span class="text-xs text-secondary ml-1">(Base: {{item.food?.servingSize}}{{item.food?.unit}})</span>
-                </div>
-                <div class="flex flex-row items-center gap-1">
-                  <mat-form-field appearance="fill" class="w-24 compact-field">
-                    <input matInput type="number" [(ngModel)]="item.quantity" (ngModelChange)="calculatePlanTotals()">
-                    <span matSuffix class="text-xs text-secondary">{{item.food?.unit}}</span>
-                  </mat-form-field>
+
+          <!-- Food Items -->
+          <div class="food-items-list">
+            <div
+              *ngFor="let item of menu.ingredients; let itemIdx = index"
+              class="food-item"
+              (touchstart)="onItemTouchStart($event, menuIdx, itemIdx)"
+              (touchmove)="onItemTouchMove($event, menuIdx, itemIdx)"
+              (touchend)="onItemTouchEnd(menuIdx, itemIdx)"
+              [style.transform]="
+                'translateX(' + (item.swipeOffset || 0) + 'px)'
+              "
+              [style.background-color]="
+                item.swipeOffset ? 'var(--c-negative-bg)' : 'transparent'
+              "
+            >
+              <div class="food-item-left">
+                <div class="food-label">{{ item.food?.name }}</div>
+                <div class="food-base">
+                  Base {{ item.food?.servingSize }}{{ item.food?.unit }}
                 </div>
               </div>
-              
-              <div class="text-xs text-secondary mt-1">
-                {{ calculateItemMacros(item).kcal | number:'1.0-0' }} kcal | 
-                {{ calculateItemMacros(item).protein | number:'1.0-1' }}g P | 
-                {{ calculateItemMacros(item).carb | number:'1.0-1' }}g C | 
-                {{ calculateItemMacros(item).fat | number:'1.0-1' }}g F
+
+              <div class="food-quantity-wrap">
+                <input
+                  class="food-quantity-input"
+                  type="number"
+                  [value]="item.quantity"
+                  (input)="onQuantityChange(menuIdx, itemIdx, $event)"
+                  min="0.1"
+                  step="0.1"
+                />
+                <span class="food-quantity-unit">{{ item.food?.unit }}</span>
+              </div>
+
+              <div class="food-item-macros">
+                <div class="macro-badge kcal">
+                  🔥{{ calculateItemMacros(item).kcal | number: '1.0-0' }}kcal
+                </div>
+                <div class="macro-badge protein">
+                  {{ calculateItemMacros(item).protein | number: '1.0-1' }}g
+                </div>
+                <div class="macro-badge carb">
+                  {{ calculateItemMacros(item).carb | number: '1.0-1' }}g
+                </div>
+                <div class="macro-badge fat">
+                  {{ calculateItemMacros(item).fat | number: '1.0-1' }}g
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Grand Totals -->
-        <div class="p-2 rounded-lg" style="background-color: var(--c-gray-100); color: var(--c-gray-800); border: var(--border);">
-          <div class="text-sm font-semibold text-center">Total for the Day</div>
-          <div class="grid grid-cols-4 gap-1 text-center">
-            <div>
-              <div class="text-secondary text-xs">KCal</div>
-              <div class="text-base font-bold">{{calculatePlanTotals().kcal | number:'1.0-0'}}</div>
-              <div class="text-xs text-secondary">/ {{targetMacros.kcal}}</div>
+        <!-- Daily Totals -->
+        <div class="daily-totals">
+          <div class="totals-main">
+            <div class="total-kcal">
+              {{ calculatePlanTotals().kcal | number: '1.0-0'
+              }}<span class="total-label">kcal</span>
             </div>
-            <div>
-              <div class="text-secondary text-xs">Protein</div>
-              <div class="text-base font-bold">{{calculatePlanTotals().protein | number:'1.0-1'}}g</div>
-              <div class="text-xs text-secondary">/ {{targetMacros.protein}}g</div>
-            </div>
-            <div>
-              <div class="text-secondary text-xs">Carbs</div>
-              <div class="text-base font-bold">{{calculatePlanTotals().carb | number:'1.0-1'}}g</div>
-              <div class="text-xs text-secondary">/ {{targetMacros.carb}}g</div>
-            </div>
-            <div>
-              <div class="text-secondary text-xs">Fat</div>
-              <div class="text-base font-bold">{{calculatePlanTotals().fat | number:'1.0-1'}}g</div>
-              <div class="text-xs text-secondary">/ {{targetMacros.fat}}g</div>
+            <div class="totals-macros">
+              <div class="macro-total">
+                <span class="macro-value"
+                  >{{ calculatePlanTotals().protein | number: '1.0-0' }}g</span
+                >
+                <span class="macro-name">Protein</span>
+              </div>
+              <div class="macro-total">
+                <span class="macro-value"
+                  >{{ calculatePlanTotals().carb | number: '1.0-0' }}g</span
+                >
+                <span class="macro-name">Carbs</span>
+              </div>
+              <div class="macro-total">
+                <span class="macro-value"
+                  >{{ calculatePlanTotals().fat | number: '1.0-0' }}g</span
+                >
+                <span class="macro-name">Fat</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </mat-card-content>
-  </mat-card>
+
+      <!-- Empty State -->
+      <div *ngIf="plannedMenus.length === 0" class="empty-state">
+        <mat-icon>restaurant</mat-icon>
+        <div class="empty-state-text">No items planned for today</div>
+        <div class="empty-state-subtext">
+          Go to Menus tab and select items to plan
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Floating Action Button -->
-  <button mat-fab color="primary" class="fab-btn" (click)="openCreateMenuDialog()">
+  <button
+    *ngIf="activeTab === 'today'"
+    mat-mini-fab
+    class="fab-btn"
+    (click)="openAddMenuDialog()"
+  >
     <mat-icon>add</mat-icon>
   </button>
 </div>

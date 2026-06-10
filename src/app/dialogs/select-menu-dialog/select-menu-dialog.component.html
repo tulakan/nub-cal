@@ -1,0 +1,36 @@
+<div class="dialog-container">
+  <div class="dialog-header">
+    <div class="dialog-title">Add Menu</div>
+    <button mat-icon-button class="close-btn" (click)="close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="search-box">
+    <mat-icon class="search-icon">search</mat-icon>
+    <input
+      type="text"
+      [(ngModel)]="searchQuery"
+      (ngModelChange)="filterMenus()"
+      placeholder="ค้นหาเมนู..."
+      class="search-input"
+      autofocus
+    />
+  </div>
+
+  <div class="menu-list">
+    <button
+      *ngFor="let menu of filteredMenus"
+      class="menu-item"
+      (click)="selectMenu(menu)"
+    >
+      <div class="menu-name">{{ menu.name }}</div>
+      <div class="menu-meta">{{ menu.ingredients.length }} ingredients</div>
+    </button>
+
+    <div *ngIf="filteredMenus.length === 0" class="empty-state">
+      <mat-icon>search_off</mat-icon>
+      <div>No menus found</div>
+    </div>
+  </div>
+</div>
