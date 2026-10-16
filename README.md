@@ -2,7 +2,7 @@
 
 A mobile-first PWA for counting calories, planning meals and tracking body progress. I built it to track my own weight loss.
 
-**Live demo:** https://nubcal.web.app. Tap **"Just looking? Try the demo"** on the login screen to open a sample account without signing up.
+**Live demo:** https://nubcal.web.app/demo opens a sample account straight away, no sign-up needed. The full app is at https://nubcal.web.app.
 
 ## Features
 

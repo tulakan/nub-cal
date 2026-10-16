@@ -39,6 +39,13 @@ export class LoginPage {
   loading = signal<'' | 'login' | 'reset' | 'demo'>('');
   error = signal('');
 
+  ngOnInit() {
+    // /demo: start the demo right away, but never replace a signed-in session
+    if (this.route.snapshot.data['demo'] && !this.session.user()) {
+      this.tryDemo();
+    }
+  }
+
   async submit() {
     if (this.loading()) return;
     if (!this.email.trim() || !this.password) {

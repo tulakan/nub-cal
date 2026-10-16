@@ -13,6 +13,14 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/login/login.component').then(m => m.LoginPage),
   },
+  // Shareable link that drops visitors straight into demo mode
+  {
+    path: 'demo',
+    canActivate: [loginPageGuard],
+    data: { demo: true },
+    loadComponent: () =>
+      import('./pages/login/login.component').then(m => m.LoginPage),
+  },
   {
     path: 'welcome',
     canActivate: [welcomeGuard],
