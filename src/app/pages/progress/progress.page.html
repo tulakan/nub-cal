@@ -1,0 +1,122 @@
+<app-segmented
+  [options]="segments"
+  [value]="kind()"
+  (valueChange)="setKind($event)"
+/>
+
+@if (loading()) {
+  <div class="pad"><app-skeleton [count]="5" [height]="64" /></div>
+} @else if (!rows().length) {
+  <app-empty-state
+    icon="show_chart"
+    title="No entries yet"
+    [hint]="
+      kind() === 'body'
+        ? 'Log your weight and body composition'
+        : 'Log your first measurements'
+    "
+  >
+    <button type="button" class="nub-btn cta" (click)="add()">Add entry</button>
+  </app-empty-state>
+} @else {
+  <section class="hero">
+    <div class="hl num">{{ metric().label }}</div>
+    <div class="hv num">
+      {{ heroValue()
+      }}<span class="hu">{{ metric().unit ? ' ' + metric().unit : '' }}</span>
+    </div>
+    <div class="hd num">
+      @if (heroDelta() !== null) {
+        <span
+          >{{ heroDelta()! > 0 ? '▲' : heroDelta()! < 0 ? '▼' : '–' }}
+          {{ heroDelta()! < 0 ? -heroDelta()! : heroDelta() }} vs last</span
+        >
+      }
+      @if (sinceFirst() !== null) {
+        <span>
+          · {{ sinceFirst()! > 0 ? '+' : '' }}{{ sinceFirst() }} since
+          {{ formatDate(first()!.ts) }}
+        </span>
+      }
+    </div>
+  </section>
+
+  <app-chips [options]="ranges" [(value)]="range" />
+
+  @if (chartPoints().length > 1) {
+    <div
+      class="chart"
+      echarts
+      [options]="chartOptions()"
+      [autoResize]="true"
+      role="img"
+      [attr.aria-label]="metric().label + ' trend chart'"
+    ></div>
+  } @else {
+    <div class="chart-empty">Not enough entries in this range. Try “All”.</div>
+  }
+
+  <div class="tiles">
+    @for (m of metrics(); track m.key) {
+      <button
+        type="button"
+        class="tile nub-row-btn"
+        [class.sel]="m.key === metric().key"
+        [attr.aria-pressed]="m.key === metric().key"
+        (click)="selectMetric(m.key)"
+      >
+        <app-stat-tile
+          [label]="m.label"
+          [value]="tileValue(m) ?? '–'"
+          [unit]="m.unit"
+          [delta]="tileDelta(m)"
+          [goodDirection]="m.good"
+          [tint]="tints[$index % tints.length]"
+        />
+      </button>
+    }
+  </div>
+
+  <div class="sect-head"><div class="sect-title">History</div></div>
+  <div class="hist">
+    @for (r of history().slice(0, historyLimit()); track r['id']) {
+      <button
+        type="button"
+        class="hrow nub-row-btn"
+        [attr.aria-expanded]="historyOpen() === $index"
+        (click)="historyOpen.set(historyOpen() === $index ? null : $index)"
+      >
+        <div class="hline">
+          <span class="hdate">{{ formatDate(r.ts) }}</span>
+          <span class="hsum num">{{ summary(r) }}</span>
+        </div>
+        @if (historyOpen() === $index) {
+          <div class="hdet num">
+            @for (d of details(r); track d.label) {
+              <span
+                ><b>{{ d.label }}</b> {{ d.value }}</span
+              >
+            }
+          </div>
+          @if (r['note']) {
+            <div class="hnote">{{ r['note'] }}</div>
+          }
+        }
+      </button>
+    }
+    @if (history().length > historyLimit()) {
+      <button
+        type="button"
+        class="nub-btn text"
+        (click)="historyLimit.set(historyLimit() + 10)"
+      >
+        Show more
+      </button>
+    }
+  </div>
+}
+
+<button type="button" class="nub-fab" (click)="add()">
+  <mat-icon>add</mat-icon>
+  Entry
+</button>

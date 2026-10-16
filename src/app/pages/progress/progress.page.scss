@@ -1,0 +1,128 @@
+:host {
+  display: block;
+}
+
+.pad {
+  padding-top: var(--space-md);
+}
+
+.cta {
+  width: auto;
+  padding: 0 var(--space-xl);
+}
+
+.hero {
+  padding: var(--space-lg) var(--space-xs) var(--space-sm);
+}
+
+.hl {
+  font-size: var(--fs-body-sm);
+  color: var(--c-gray-600);
+}
+
+.hv {
+  font-size: var(--fs-hero);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--c-primary-ink);
+}
+
+.hu {
+  font-size: var(--fs-title);
+  font-weight: 400;
+  color: var(--c-gray-600);
+}
+
+.hd {
+  font-size: var(--fs-body-sm);
+  color: var(--c-gray-600);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.chart {
+  height: 180px;
+  width: 100%;
+  margin: var(--space-sm) 0;
+}
+
+.chart-empty {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: var(--space-sm) 0;
+  border-radius: var(--radius-md);
+  background: var(--c-gray-50);
+  font-size: var(--fs-body-sm);
+  color: var(--c-gray-600);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
+}
+
+.tile {
+  display: block;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+
+  &.sel {
+    border-color: var(--c-primary-ink);
+  }
+
+  app-stat-tile {
+    display: block;
+  }
+}
+
+.hist {
+  display: flex;
+  flex-direction: column;
+}
+
+.hrow {
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md) var(--space-xs);
+  border-bottom: var(--border);
+  min-height: 52px;
+}
+
+.hline {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.hdate {
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+
+.hsum {
+  font-size: var(--fs-body-sm);
+  color: var(--c-gray-600);
+}
+
+.hdet {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
+  font-size: var(--fs-body-sm);
+  color: var(--c-gray-800);
+
+  b {
+    font-weight: 500;
+    color: var(--c-gray-600);
+  }
+}
+
+.hnote {
+  font-size: var(--fs-body-sm);
+  color: var(--c-gray-600);
+  font-style: italic;
+}
