@@ -1,27 +1,52 @@
-# PersonalApp
+# Nub Cal
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 18.0.1.
+A mobile-first PWA for counting calories, planning meals and tracking body progress. I built it to track my own weight loss.
 
-## Development server
+**Live demo:** https://nubcal.web.app. Tap **"Just looking? Try the demo"** on the login screen to open a sample account without signing up.
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+## Features
 
-## Code scaffolding
+- **Today**: log meals and see calories, protein, carbs and fat left for the day
+- **Plan**: build reusable menus from ingredients and plan meals ahead
+- **Foods**: personal food database with nutrition per serving
+- **Progress**: weight and body-composition charts over time
+- **Demo mode**: an anonymous account pre-filled with sample data
+- **Installable PWA**: works offline after the first visit and can be added to the home screen
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+## Tech stack
 
-## Build
+- Angular 18 (standalone components, signals), TypeScript, RxJS
+- Angular Material and Tailwind CSS
+- Apache ECharts (`ngx-echarts`) for charts
+- Firebase Authentication (email/password and anonymous) and Cloud Firestore
+- Firebase Hosting, with an Angular service worker for offline caching
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+## Security
 
-## Running unit tests
+All user data lives under `users/{uid}/…` in Firestore. The rules in [`firestore.rules`](firestore.rules) only let a signed-in user read and write their own documents. Everything else is denied, and the Realtime Database is locked in [`database.rules.json`](database.rules.json) because the app doesn't use it.
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+The Firebase web config in `src/environments/firebase.config.ts` is public by design: it identifies the project but grants no access. Access is enforced by the security rules above.
 
-## Running end-to-end tests
+## Project structure
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+```
+src/app/
+  pages/      Today, Plan, Foods, Progress, Login, Welcome
+  dialogs/    bottom-sheet forms (add food, edit entry, targets, …)
+  stores/     signal-based state: profile, food log, menu plan
+  shared/     services (session, user data, demo), guards, pipes, utils
+```
 
-## Further help
+## Running locally
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+```bash
+pnpm install
+pnpm start          # http://localhost:4203
+```
+
+## Build and deploy
+
+```bash
+pnpm build          # outputs to public/
+firebase deploy     # hosting + Firestore and Realtime Database rules
+```
