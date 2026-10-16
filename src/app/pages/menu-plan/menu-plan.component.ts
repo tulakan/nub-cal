@@ -1,311 +1,208 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { Router } from '@angular/router';
 import { SelectMenuDialogComponent } from '../../dialogs/select-menu-dialog/select-menu-dialog.component';
+import { ConfirmService } from '../../shared/components/confirm-dialog.component';
+import { MacroChipsComponent } from '../../shared/components/macro-chips.component';
+import { MacroSummaryComponent } from '../../shared/components/macro-summary.component';
+import {
+  ChipsComponent,
+  EmptyStateComponent,
+  SegmentedComponent,
+  SkeletonComponent,
+} from '../../shared/components/primitives';
+import { QtyInputComponent } from '../../shared/components/qty-input.component';
+import { SheetService } from '../../shared/components/sheet.service';
+import { SwipeRowComponent } from '../../shared/components/swipe-row.component';
+import { UndoService } from '../../shared/components/undo.service';
 import { Food } from '../../shared/interface/food.interface';
-import { Menu, MenuIngredient } from '../../shared/interface/menu.interface';
-import { MaterialModule } from '../../shared/modules/material.module';
-import { FoodService } from '../../shared/services/food.service';
-import { LocalStorageService } from '../../shared/services/local-storage.service';
+import { Menu } from '../../shared/interface/menu.interface';
+import { PlannedMenu } from '../../shared/interface/plan.interface';
+import { KcalPipe, MacroPipe } from '../../shared/pipes/format.pipes';
 import { MenuService } from '../../shared/services/menu.service';
+import { calcNutrition } from '../../shared/utils/nutrition';
+import { FoodLogStore } from '../../stores/food-log.store';
+import { MenuPlanStore } from '../../stores/menu-plan.store';
+
+const SEG_KEY = 'plan-segment';
+const norm = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
 
 @Component({
   selector: 'app-menu-plan',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialModule],
+  imports: [
+    MacroChipsComponent,
+    MatIconModule,
+    MatMenuModule,
+    SegmentedComponent,
+    ChipsComponent,
+    EmptyStateComponent,
+    SkeletonComponent,
+    SwipeRowComponent,
+    QtyInputComponent,
+    MacroSummaryComponent,
+    KcalPipe,
+    MacroPipe,
+  ],
   templateUrl: './menu-plan.component.html',
   styleUrls: ['./menu-plan.component.scss'],
 })
 export class MenuPlanComponent implements OnInit {
-  private foodService = inject(FoodService);
-  private menuService = inject(MenuService);
-  private snackBar = inject(MatSnackBar);
   private router = inject(Router);
-  private dialog = inject(MatDialog);
-  private localStorageService = inject(LocalStorageService);
+  private sheets = inject(SheetService);
+  private undo = inject(UndoService);
+  private confirm = inject(ConfirmService);
+  private menuService = inject(MenuService);
+  store = inject(MenuPlanStore);
+  log = inject(FoodLogStore);
 
-  activeTab: 'menus' | 'today' = 'today';
+  segments = [
+    { value: 'plan', label: 'Plan' },
+    { value: 'menus', label: 'Menus' },
+  ];
+  scaleOptions = [
+    { value: '0.5', label: '½×' },
+    { value: '1', label: '1×' },
+    { value: '1.5', label: '1½×' },
+    { value: '2', label: '2×' },
+  ];
 
-  targetMacros = {
-    kcal: 2000,
-    protein: 150,
-    carb: 250,
-    fat: 67,
-  };
+  segment = signal(this.readSegment());
+  query = signal('');
 
-  foods: Food[] = [];
-  menus: Menu[] = [];
-  filteredMenus: Menu[] = [];
-  menuSearchQuery = '';
+  filteredMenus = computed(() => {
+    const q = norm(this.query().trim());
+    const all = this.store.menus();
+    return q ? all.filter(m => norm(m.name).includes(q)) : all;
+  });
 
-  // For Planning
-  selectedMenuIds: string[] = [];
-  plannedMenus: (Menu & {
-    id: string;
-    ingredients: (MenuIngredient & {
-      food?: Food;
-      swipeOffset?: number;
-      touchStartX?: number;
-    })[];
-  })[] = [];
-
-  startY = 0;
-  pullDistance = 0;
-  isRefreshing = false;
-  itemTouchStartX = 0;
+  pending = computed(() => this.store.plan().filter(p => !p.loggedAt));
 
   ngOnInit() {
-    this.loadFoods();
-    this.loadMenus();
+    this.store.start();
+    this.log.refreshDay();
+  }
 
-    const savedTargets = localStorage.getItem('food-log-target-macros');
-    if (savedTargets) {
-      this.targetMacros = JSON.parse(savedTargets);
+  setSegment(v: string) {
+    this.segment.set(v);
+    try {
+      localStorage.setItem(SEG_KEY, v);
+    } catch {}
+  }
+
+  private readSegment(): string {
+    try {
+      return localStorage.getItem(SEG_KEY) === 'menus' ? 'menus' : 'plan';
+    } catch {
+      return 'plan';
     }
   }
 
-  onTouchStart(e: TouchEvent) {
-    if (window.scrollY === 0) {
-      this.startY = e.touches[0].clientY;
-    }
+  foodOf(foodId: string): Food | undefined {
+    return this.store.foodsById().get(foodId);
   }
 
-  onTouchMove(e: TouchEvent) {
-    if (this.startY === 0) return;
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - this.startY;
-    if (diff > 0 && window.scrollY === 0) {
-      this.pullDistance = Math.min(diff * 0.5, 80);
-      if (e.cancelable) {
-        e.preventDefault();
-      }
-    }
+  kcalOf(ing: { foodId: string; quantity: number }): number {
+    return calcNutrition(this.foodOf(ing.foodId), ing.quantity).kcal;
   }
 
-  onTouchEnd() {
-    if (this.pullDistance > 50) {
-      this.refreshData();
-    }
-    this.startY = 0;
-    this.pullDistance = 0;
+  openPicker() {
+    this.sheets.open(SelectMenuDialogComponent);
   }
 
-  refreshData() {
-    this.isRefreshing = true;
-    this.loadMenus();
-    this.loadFoods();
-    setTimeout(() => {
-      this.isRefreshing = false;
-    }, 1000);
+  newMenu() {
+    this.router.navigate(['/plan/menu/new']);
   }
 
-  loadFoods() {
-    this.foodService.getFoodListRealtime(foods => {
-      this.foods = foods;
+  editMenu(id: string | undefined) {
+    if (id) this.router.navigate(['/plan/menu', id]);
+  }
+
+  addToPlan(menu: Menu) {
+    const id = this.store.addToPlan(menu);
+    this.undo.undoable(`${menu.name} added to plan`, () =>
+      this.store.removeInstance(id)
+    );
+  }
+
+  async deleteMenu(menu: Menu) {
+    if (!menu.id) return;
+    const ok = await this.confirm.ask({
+      title: `Delete "${menu.name}"?`,
+      message: 'This removes the saved menu. Past logs are not affected.',
+      confirmLabel: 'Delete',
+      destructive: true,
     });
+    if (ok) {
+      await this.menuService.deleteMenu(menu.id);
+      this.undo.notify(`${menu.name} deleted`);
+    }
   }
 
-  loadMenus() {
-    this.menuService.getMenuListRealtime(menus => {
-      this.menus = menus;
-      this.filterMenus();
-    });
-  }
-
-  onMenuSearch(event: any) {
-    this.menuSearchQuery = event.target.value;
-    this.filterMenus();
-  }
-
-  filterMenus() {
-    if (!this.menuSearchQuery) {
-      this.filteredMenus = this.menus;
-    } else {
-      const query = this.menuSearchQuery.toLowerCase();
-      this.filteredMenus = this.menus.filter(menu =>
-        menu.name.toLowerCase().includes(query)
+  removeInstance(p: PlannedMenu) {
+    const r = this.store.removeInstance(p.instanceId);
+    if (r)
+      this.undo.undoable(`${p.name} removed`, () =>
+        this.store.restoreInstance(r)
       );
+  }
+
+  removeIngredient(p: PlannedMenu, index: number) {
+    const prev = this.store.plan();
+    if (p.ingredients.length === 1) {
+      this.removeInstance(p);
+      return;
     }
+    this.store.removeIngredient(p.instanceId, index);
+    this.undo.undoable('Item removed', () => this.store.setPlan(prev));
   }
 
-  displayEmpty(value: any): string {
-    return '';
-  }
-  onMenuSelected(event: any) {
-    const menuId = event.option.value;
-    if (!this.selectedMenuIds.includes(menuId)) {
-      this.selectedMenuIds.push(menuId);
-      this.onMenuSelectChange();
-    }
-    this.menuSearchQuery = '';
-    this.filterMenus();
-  }
-  onMenuSelectChange() {
-    this.plannedMenus = this.selectedMenuIds
-      .map(id => {
-        const menu = this.menus.find(m => m.id === id);
-        if (!menu) return null;
-
-        // Deep copy ingredients so we can adjust quantities without affecting the original menu template
-        const ingredients = menu.ingredients.map(ing => {
-          const food = this.foods.find(f => f.id === ing.foodId);
-          return { ...ing, food };
-        });
-
-        return { ...menu, id, ingredients };
-      })
-      .filter(m => m !== null) as any;
-  }
-
-  deleteMenu(id: string | undefined) {
-    if (!id) return;
-    const menu = this.menus.find(m => m.id === id);
-    if (!menu) return;
-    this.menuService.deleteMenu(id);
-    this.snackBar.open(`Menu "${menu.name}" deleted`, '', { duration: 2000 });
-  }
-
-  openCreateMenuDialog() {
-    this.router.navigate(['/menu-create']);
-  }
-
-  openAddMenuDialog() {
-    const dialogRef = this.dialog.open(SelectMenuDialogComponent, {
-      data: { menus: this.menus },
-      width: '90%',
-      maxWidth: '380px',
-    });
-
-    dialogRef.afterClosed().subscribe((menu: Menu) => {
-      if (menu?.id) {
-        this.selectedMenuIds.push(menu.id);
-        this.onMenuSelectChange();
-      }
-    });
-  }
-
-  onQuantityChange(menuIdx: number, itemIdx: number, event: any) {
-    const value = parseFloat(event.target.value);
-    if (isNaN(value) || value <= 0) return;
-    this.plannedMenus[menuIdx].ingredients[itemIdx].quantity = value;
-  }
-
-  calculateItemMacros(item: any) {
-    if (!item.food) return { kcal: 0, protein: 0, carb: 0, fat: 0 };
-    const factor = item.quantity / item.food.servingSize;
-    return {
-      kcal: item.food.kcal * factor,
-      protein: item.food.protein * factor,
-      carb: item.food.carb * factor,
-      fat: item.food.fat * factor,
-    };
-  }
-
-  openEditMenuDialog(menu: any) {
-    this.router.navigate(['/menu-edit', menu.id]);
-  }
-
-  calculatePlanTotals() {
-    let kcal = 0,
-      protein = 0,
-      carb = 0,
-      fat = 0;
-    this.plannedMenus.forEach(menu => {
-      menu.ingredients.forEach((item: any) => {
-        if (item.food) {
-          const factor = item.quantity / item.food.servingSize;
-          kcal += item.food.kcal * factor;
-          protein += item.food.protein * factor;
-          carb += item.food.carb * factor;
-          fat += item.food.fat * factor;
-        }
+  async logInstance(p: PlannedMenu) {
+    if (p.loggedAt) {
+      const again = await this.confirm.ask({
+        title: 'Log again?',
+        message: `${p.name} is already logged today.`,
+        confirmLabel: 'Log again',
       });
-    });
-    return { kcal, protein, carb, fat };
+      if (!again) return;
+    }
+    this.logMany([p]);
   }
 
-  // Delete food item from menu
-  removeFood(menuIdx: number, itemIdx: number) {
-    if (menuIdx >= 0 && menuIdx < this.plannedMenus.length) {
-      const menu = this.plannedMenus[menuIdx];
-      if (itemIdx >= 0 && itemIdx < menu.ingredients.length) {
-        menu.ingredients.splice(itemIdx, 1);
+  logAll() {
+    this.logMany(this.pending());
+  }
 
-        // If menu has no ingredients, remove the entire menu
-        if (menu.ingredients.length === 0) {
-          this.removeMenu(menuIdx);
-        } else {
-          this.calculatePlanTotals();
-        }
-
-        this.snackBar
-          .open('Food item removed', 'Undo', { duration: 3000 })
-          .onAction()
-          .subscribe(() => {
-            this.onMenuSelectChange();
-          });
+  private logMany(items: PlannedMenu[]) {
+    if (!items.length) return;
+    const prevLogged = new Map(items.map(p => [p.instanceId, p.loggedAt]));
+    const ids: string[] = [];
+    let skipped = 0;
+    let kcal = 0;
+    for (const p of items) {
+      const r = this.log.logMenu(
+        { menuId: p.menuId, name: p.name, ingredients: p.ingredients },
+        this.store.foodsById()
+      );
+      ids.push(...r.ids);
+      skipped += r.skipped;
+      kcal += this.store.instanceNutrition(p).kcal;
+    }
+    this.store.markLogged(items.map(p => p.instanceId));
+    const note = skipped ? ` · ${skipped} skipped (food deleted)` : '';
+    this.undo.undoable(
+      `Logged ${items.length} ${items.length === 1 ? 'menu' : 'menus'} · ${Math.round(kcal)} kcal${note}`,
+      () => {
+        this.log.remove(ids);
+        prevLogged.forEach((at, id) => this.store.markLogged([id], at));
       }
-    }
+    );
   }
 
-  // Delete entire menu from plan
-  removeMenu(menuIdx: number) {
-    if (menuIdx >= 0 && menuIdx < this.plannedMenus.length) {
-      const menuName = this.plannedMenus[menuIdx].name;
-      this.plannedMenus.splice(menuIdx, 1);
-
-      // Update selectedMenuIds
-      if (this.plannedMenus[menuIdx]) {
-        const menuId = this.plannedMenus[menuIdx].id;
-        const idxInSelected = this.selectedMenuIds.indexOf(menuId);
-        if (idxInSelected >= 0) {
-          this.selectedMenuIds.splice(idxInSelected, 1);
-        }
-      }
-
-      this.calculatePlanTotals();
-      this.snackBar.open(`Menu "${menuName}" removed`, '', { duration: 2000 });
-    }
-  }
-
-  // Swipe handlers for food items
-  onItemTouchStart(e: TouchEvent, menuIdx: number, itemIdx: number) {
-    this.itemTouchStartX = e.touches[0].clientX;
-    if (!this.plannedMenus[menuIdx].ingredients[itemIdx]) {
-      this.plannedMenus[menuIdx].ingredients[itemIdx] = {} as any;
-    }
-    this.plannedMenus[menuIdx].ingredients[itemIdx].touchStartX =
-      this.itemTouchStartX;
-  }
-
-  onItemTouchMove(e: TouchEvent, menuIdx: number, itemIdx: number) {
-    if (this.itemTouchStartX === 0) return;
-
-    const currentX = e.touches[0].clientX;
-    const diff = this.itemTouchStartX - currentX; // Negative = swiped left
-
-    if (Math.abs(diff) > 10) {
-      const maxSwipe = 60;
-      const offset = Math.max(-maxSwipe, Math.min(0, diff));
-      this.plannedMenus[menuIdx].ingredients[itemIdx].swipeOffset = offset;
-    }
-  }
-
-  onItemTouchEnd(menuIdx: number, itemIdx: number) {
-    const swipeOffset =
-      this.plannedMenus[menuIdx].ingredients[itemIdx].swipeOffset || 0;
-
-    // If swiped more than 40px, delete the item
-    if (swipeOffset < -40) {
-      this.removeFood(menuIdx, itemIdx);
-    } else {
-      // Reset swipe animation
-      this.plannedMenus[menuIdx].ingredients[itemIdx].swipeOffset = 0;
-    }
-
-    this.itemTouchStartX = 0;
+  clearPlan() {
+    const prev = this.store.clearPlan();
+    this.undo.undoable('Plan cleared', () => this.store.setPlan(prev));
   }
 }

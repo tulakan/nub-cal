@@ -1,158 +1,104 @@
-<div class="food-log-container">
-  <mat-card class="food-log-card remaining-section">
-    <div class="sect-header-container">
-      <div class="w-full sect-title">Today's Progress</div>
-      <span class="spacer"></span>
-      <div class="set-target-btn" matRipple (click)="openTargetDialog()">
-        <!-- <mat-icon>flag</mat-icon> -->
-        <mat-icon>settings</mat-icon>
-      </div>
-    </div>
+<section class="summary">
+  <app-macro-summary
+    variant="hero"
+    [target]="log.targets()"
+    [consumed]="log.consumed()"
+  />
+</section>
 
-    <div class="overflow-x-auto w-full">
-      <table class="remain-table">
-        <tr>
-          <th></th>
-          <th>Calories</th>
-          <th>Protein</th>
-          <th>Carbs</th>
-          <th>Fat</th>
-        </tr>
-        <tr>
-          <td class="label-cell left-cell">Target</td>
-          <td>{{ targetMacros().kcal | number: '1.0-0' }}kcal</td>
-          <td>{{ targetMacros().protein | number: '1.1-1' }}g</td>
-          <td>{{ targetMacros().carb | number: '1.1-1' }}g</td>
-          <td>{{ targetMacros().fat | number: '1.1-1' }}g</td>
-        </tr>
-        <tr>
-          <td class="label-cell left-cell">Consumed</td>
-          <td>{{ totalConsumed().kcal | number: '1.0-0' }}kcal</td>
-          <td>{{ totalConsumed().protein | number: '1.1-1' }}g</td>
-          <td>{{ totalConsumed().carb | number: '1.1-1' }}g</td>
-          <td>{{ totalConsumed().fat | number: '1.1-1' }}g</td>
-        </tr>
-
-        <!-- todo: swap +/- Sign. remain -> -(green) / over -> +(red) -->
-        <!-- todo: recheck gap value / unit -->
-        <!-- todo: recheck unit in log list just use xxp xxc xxf instena og xxxg protein -->
-        <!-- todo: add logout button -->
-        <!-- todo: add flag that indicate is ingradiant / food menu -->
-        <tr>
-          <td class="label-cell left-cell">Remaining</td>
-          <td [class]="remainingMacros().kcal >= 0 ? 'positive' : 'negative'">
-            {{ remainingMacros().kcal >= 0 ? '+' : ''
-            }}{{ remainingMacros().kcal | number: '1.0-0' }}kcal
-          </td>
-          <td [class]="remainingMacros().protein >= 0 ? 'positive' : 'negative'">
-            {{ remainingMacros().protein >= 0 ? '+' : ''
-            }}{{ remainingMacros().protein | number: '1.1-1' }}g
-          </td>
-          <td [class]="remainingMacros().carb >= 0 ? 'positive' : 'negative'">
-            {{ remainingMacros().carb >= 0 ? '+' : ''
-            }}{{ remainingMacros().carb | number: '1.1-1' }}g
-          </td>
-          <td [class]="remainingMacros().fat >= 0 ? 'positive' : 'negative'">
-            {{ remainingMacros().fat >= 0 ? '+' : ''
-            }}{{ remainingMacros().fat | number: '1.1-1' }}g
-          </td>
-        </tr>
-      </table>
-    </div>
-  </mat-card>
-
-  <mat-card class="food-log-card food-log-section">
-    <div class="sect-header-container mb-2">
-      <div class="w-full sect-title">Food Log</div>
-      <span class="spacer"></span>
-      <div class="set-target-btn" matRipple (click)="openAddFoodDialog()">
-        <mat-icon>add_circle</mat-icon>
-      </div>
-    </div>
-
-    <div class="logged-foods">
-      <div
-        class="logged-food-item"
-        [class.expanded]="expandedIndex() === i"
-        *ngFor="let loggedFood of loggedFoods(); let i = index"
-        (click)="toggleExpanded(i)"
-      >
-        <div class="food-item-line line-1">
-          <span class="food-name">{{ loggedFood.food.name }}</span>
-          <span class="food-unit">{{ loggedFood.servingSize }}{{ loggedFood.food.unit }}</span>
-        </div>
-        
-        <div class="food-item-line line-2">
-          <div class="nutrition-summary-text">
-            {{ loggedFood.calculatedNutrition.kcal }} kcal | 
-            {{ loggedFood.calculatedNutrition.protein }}g protein | 
-            {{ loggedFood.calculatedNutrition.carb }}g carb | 
-            {{ loggedFood.calculatedNutrition.fat }}g fat
-          </div>
-        </div>
-
-        <div class="food-item-actions" *ngIf="expandedIndex() === i">
-          <button
-            mat-raised-button
-            class="delete-action-btn"
-            (click)="confirmDelete(i); $event.stopPropagation()"
-          >
-            <mat-icon>delete</mat-icon>
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div class="w-full empty-state" *ngIf="loggedFoods().length === 0">
-      <div class="empty-content">
-        <mat-icon class="empty-icon">restaurant</mat-icon>
-        <h3>No foods logged</h3>
-        <p>Start by adding foods to track your nutrition.</p>
-      </div>
-    </div>
-    <div class="w-full" *ngIf="loggedFoods().length > 0">
-      <button
-        mat-raised-button
-        color="warn"
-        class="add-food-btn w-full"
-        (click)="clearFoodLogs()"
-        [disabled]="loggedFoods().length === 0"
-      >
-        <mat-icon>delete_forever</mat-icon>
-        Delete All Logged Foods
-      </button>
-    </div>
-  </mat-card>
-
-
-
-  <!-- Global Actions -->
-  <!-- <mat-card
-    class="global-actions"
-    *ngIf="loggedFoods().length > 0 || targetMacros().kcal !== 2000"
+<div class="sect-head">
+  <div class="sect-title">Logged · {{ log.items().length }}</div>
+  <button
+    type="button"
+    class="more"
+    aria-label="More actions"
+    [matMenuTriggerFor]="menu"
   >
-    <mat-card-content>
-      <div class="action-buttons">
-        <button
-          mat-raised-button
-          color="warn"
-          (click)="resetAll()"
-          class="reset-all-btn"
-        >
-          <mat-icon>restart_alt</mat-icon>
-          Reset Everything
-        </button>
-        <button
-          mat-stroked-button
-          color="accent"
-          (click)="clearLocalStorage()"
-          matTooltip="Clear all data and reset to defaults"
-        >
-          <mat-icon>delete_forever</mat-icon>
-          Clear All Data
-        </button>
-      </div>
-    </mat-card-content>
-  </mat-card> -->
+    <mat-icon>more_vert</mat-icon>
+  </button>
+  <mat-menu #menu="matMenu">
+    <button mat-menu-item [disabled]="!log.items().length" (click)="clearAll()">
+      Clear today's log
+    </button>
+  </mat-menu>
 </div>
+
+@if (!rows().length) {
+  <app-empty-state
+    icon="restaurant"
+    title="Nothing logged yet"
+    hint="Tap Add to log your first meal"
+  />
+} @else {
+  <div class="list">
+    @for (row of rows(); track row.key) {
+      @if (row.kind === 'item') {
+        <app-swipe-row (delete)="removeItem(row.item)">
+          <button type="button" class="item nub-row-btn" (click)="edit(row.item)">
+            <div class="l1">
+              <span class="name">{{ row.item.food.name }}</span>
+              <span class="kcal num">{{ row.item.calculatedNutrition.kcal | kcal }}</span>
+            </div>
+            <div class="l2 num">
+              <span class="amt">{{ row.item.servingSize | macro: 1 }} {{ row.item.food.unit }}</span>
+              <app-macro-chips
+                [protein]="row.item.calculatedNutrition.protein"
+                [carb]="row.item.calculatedNutrition.carb"
+                [fat]="row.item.calculatedNutrition.fat"
+              />
+            </div>
+          </button>
+        </app-swipe-row>
+      } @else {
+        <app-swipe-row (delete)="removeGroup(row)">
+          <button
+            type="button"
+            class="item nub-row-btn"
+            [attr.aria-expanded]="expanded().has(row.key)"
+            (click)="toggle(row.key)"
+          >
+            <div class="l1">
+              <span class="name">
+                <mat-icon class="gicon">restaurant_menu</mat-icon>{{ row.name }}
+              </span>
+              <span class="kcal num">{{ row.nutrition.kcal | kcal }}</span>
+            </div>
+            <div class="l2 num">
+              <span class="amt">{{ row.items.length }} items</span>
+              <app-macro-chips
+                [protein]="row.nutrition.protein"
+                [carb]="row.nutrition.carb"
+                [fat]="row.nutrition.fat"
+              />
+              <mat-icon class="chev">{{
+                expanded().has(row.key) ? 'expand_less' : 'expand_more'
+              }}</mat-icon>
+            </div>
+          </button>
+        </app-swipe-row>
+        @if (expanded().has(row.key)) {
+          <div class="children">
+            @for (child of row.items; track child.id) {
+              <app-swipe-row (delete)="removeItem(child)">
+                <button type="button" class="item child nub-row-btn" (click)="edit(child)">
+                  <div class="l1">
+                    <span class="name">{{ child.food.name }}</span>
+                    <span class="kcal num">{{ child.calculatedNutrition.kcal | kcal }}</span>
+                  </div>
+                  <div class="l2 num">
+                    {{ child.servingSize | macro: 1 }} {{ child.food.unit }}
+                  </div>
+                </button>
+              </app-swipe-row>
+            }
+          </div>
+        }
+      }
+    }
+  </div>
+}
+
+<button type="button" class="nub-fab" (click)="openAdd()">
+  <mat-icon>add</mat-icon>
+  Add
+</button>

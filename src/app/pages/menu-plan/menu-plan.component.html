@@ -1,223 +1,150 @@
-<div
-  class="menu-plan-container"
-  (touchstart)="onTouchStart($event)"
-  (touchmove)="onTouchMove($event)"
-  (touchend)="onTouchEnd()"
->
-  <!-- Pull to Refresh Indicator -->
-  <div
-    class="pull-refresh-indicator"
-    [style.height.px]="pullDistance"
-    [style.transition]="pullDistance === 0 ? 'height 0.3s' : 'none'"
-  >
-    <div class="flex items-center justify-center h-full">
-      <mat-spinner diameter="20" *ngIf="isRefreshing"></mat-spinner>
-      <mat-icon
-        *ngIf="!isRefreshing"
-        [style.transform]="'rotate(' + pullDistance * 3.6 + 'deg)'"
-        [style.opacity]="pullDistance / 80"
-        >arrow_downward</mat-icon
-      >
-    </div>
-  </div>
+<app-segmented
+  [options]="segments"
+  [value]="segment()"
+  (valueChange)="setSegment($event)"
+/>
 
-  <!-- Tab Navigation -->
-  <div class="tab-nav">
-    <button
-      class="tab-btn"
-      [class.active]="activeTab === 'menus'"
-      (click)="activeTab = 'menus'"
+@if (store.loading()) {
+  <div class="pad"><app-skeleton [count]="4" /></div>
+} @else if (segment() === 'plan') {
+  @if (!store.plan().length) {
+    <app-empty-state
+      icon="event_note"
+      title="No plan for today"
+      hint="Plan your meals from saved menus"
     >
-      Menus
-    </button>
-    <button
-      class="tab-btn"
-      [class.active]="activeTab === 'today'"
-      (click)="activeTab = 'today'"
-    >
-      Today
-    </button>
-  </div>
-
-  <!-- Main Content -->
-  <div class="content-section">
-    <!-- Menus Tab -->
-    <div *ngIf="activeTab === 'menus'" class="tab-content">
-      <!-- Search Menus -->
-      <div class="search-box">
-        <mat-icon class="search-icon">search</mat-icon>
-        <input
-          type="text"
-          [(ngModel)]="menuSearchQuery"
-          (ngModelChange)="filterMenus()"
-          placeholder="ค้นหารายการอาหาร..."
-          class="search-input"
-        />
-      </div>
-
-      <!-- Filtered Menus List -->
-      <div class="menus-list" *ngIf="filteredMenus.length > 0">
-        <div
-          *ngFor="let menu of filteredMenus"
-          class="menu-item-wrapper"
-          (click)="openEditMenuDialog(menu)"
-        >
-          <div class="menu-item-content">
-            <div class="menu-item-name">{{ menu.name }}</div>
-            <div class="menu-item-meta">
-              {{ menu.ingredients.length }} ingredients
+      <button type="button" class="nub-btn cta" (click)="openPicker()">Add a menu</button>
+    </app-empty-state>
+  } @else {
+    <div class="plan">
+      @for (p of store.plan(); track p.instanceId) {
+        <section class="group" [class.logged]="p.loggedAt">
+          <div class="ghead">
+            <div class="gtitle">
+              <span class="gname">{{ p.name }}</span>
+              <span class="gmeta num">
+                {{ store.instanceNutrition(p).kcal | kcal }} kcal
+                @if (p.loggedAt) {
+                  · <span class="done"><mat-icon>check</mat-icon>Logged</span>
+                }
+              </span>
             </div>
+            <button type="button" class="more" aria-label="Menu actions" [matMenuTriggerFor]="m">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #m="matMenu">
+              <button mat-menu-item (click)="logInstance(p)">Log this menu</button>
+              <button mat-menu-item (click)="editMenu(p.menuId)">Edit menu</button>
+              <button mat-menu-item (click)="removeInstance(p)">Remove from plan</button>
+            </mat-menu>
           </div>
-          <mat-icon class="menu-chevron">chevron_right</mat-icon>
-          <button
-            mat-icon-button
-            class="menu-delete-btn"
-            (click)="deleteMenu(menu.id); $event.stopPropagation()"
-          >
-            <mat-icon>delete</mat-icon>
-          </button>
-        </div>
-      </div>
+          <app-chips
+            [options]="scaleOptions"
+            [value]="'' + p.scale"
+            (valueChange)="store.setScale(p.instanceId, +$event)"
+          />
+          <div class="ings">
+            @for (ing of p.ingredients; track $index) {
+              @let f = foodOf(ing.foodId);
+              <app-swipe-row (delete)="removeIngredient(p, $index)">
+                <div class="ing" [class.missing]="!f">
+                  <div class="iname">{{ f ? f.name : 'Deleted food' }}</div>
+                  @if (f) {
+                    <app-qty-input
+                      [compact]="true"
+                      [value]="ing.quantity"
+                      [unit]="f.unit"
+                      (valueChange)="store.setQty(p.instanceId, $index, $event)"
+                    />
+                    <div class="ikcal num">{{ kcalOf(ing) | kcal }}</div>
+                  } @else {
+                    <div class="ikcal skip">skipped</div>
+                  }
+                </div>
+              </app-swipe-row>
+            }
+          </div>
+        </section>
+      }
+      <button type="button" class="nub-btn text" (click)="clearPlan()">Clear plan</button>
+    </div>
 
-      <!-- Empty State -->
-      <div *ngIf="filteredMenus.length === 0" class="empty-state">
-        <mat-icon>restaurant</mat-icon>
-        <div class="empty-state-text">No menus found</div>
-      </div>
-
-      <!-- Create New Menu Button -->
-      <button
-        mat-raised-button
-        class="create-menu-btn"
-        (click)="openCreateMenuDialog()"
-      >
-        <mat-icon>add</mat-icon>
-        Create New Menu
+    <div class="bar">
+      <app-macro-summary
+        [target]="log.targets()"
+        [consumed]="log.consumed()"
+        [preview]="store.pendingTotals()"
+        suffix=" after plan"
+      />
+      <button type="button" class="nub-btn log" [disabled]="!pending().length" (click)="logAll()">
+        Log plan
       </button>
     </div>
-
-    <!-- Today Tab -->
-    <div *ngIf="activeTab === 'today'" class="tab-content">
-      <!-- Planned Items -->
-      <div *ngIf="plannedMenus.length > 0" class="planned-items">
-        <!-- Group items by menu -->
-        <div
-          *ngFor="let menu of plannedMenus; let menuIdx = index"
-          class="menu-group"
-        >
-          <!-- Menu Name Header -->
-          <div class="menu-header-wrapper">
-            <div class="menu-header">{{ menu.name }}</div>
+  }
+} @else {
+  <div class="search">
+    <mat-icon>search</mat-icon>
+    <input
+      type="text"
+      placeholder="Search menus"
+      autocomplete="off"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+    />
+  </div>
+  @if (!filteredMenus().length) {
+    <app-empty-state
+      icon="restaurant_menu"
+      [title]="query() ? 'No menus found' : 'No menus yet'"
+      [hint]="query() ? 'Try a different name' : 'Group foods you often eat together'"
+    >
+      @if (!query()) {
+        <button type="button" class="nub-btn cta" (click)="newMenu()">New menu</button>
+      }
+    </app-empty-state>
+  } @else {
+    <div class="menus">
+      @for (m of filteredMenus(); track m.id) {
+        <app-swipe-row [confirm]="true" (delete)="deleteMenu(m)">
+          <div class="mrow">
+            <button type="button" class="mmain nub-row-btn" (click)="editMenu(m.id)">
+              <span class="mname">{{ m.name }}</span>
+              <span class="mmeta num">
+                <span>{{ store.menuNutrition(m).kcal | kcal }} kcal · {{ m.ingredients.length }} items</span>
+                <app-macro-chips
+                  [protein]="store.menuNutrition(m).protein"
+                  [carb]="store.menuNutrition(m).carb"
+                  [fat]="store.menuNutrition(m).fat"
+                />
+              </span>
+            </button>
             <button
-              mat-icon-button
-              class="menu-header-delete-btn"
-              (click)="removeMenu(menuIdx)"
+              type="button"
+              class="madd"
+              [attr.aria-label]="'Add ' + m.name + ' to plan'"
+              (click)="addToPlan(m)"
             >
-              <mat-icon>delete</mat-icon>
+              <mat-icon>playlist_add</mat-icon>
             </button>
           </div>
-
-          <!-- Food Items -->
-          <div class="food-items-list">
-            <div
-              *ngFor="let item of menu.ingredients; let itemIdx = index"
-              class="food-item"
-              (touchstart)="onItemTouchStart($event, menuIdx, itemIdx)"
-              (touchmove)="onItemTouchMove($event, menuIdx, itemIdx)"
-              (touchend)="onItemTouchEnd(menuIdx, itemIdx)"
-              [style.transform]="
-                'translateX(' + (item.swipeOffset || 0) + 'px)'
-              "
-              [style.background-color]="
-                item.swipeOffset ? 'var(--c-negative-bg)' : 'transparent'
-              "
-            >
-              <div class="food-item-left">
-                <div class="food-label">{{ item.food?.name }}</div>
-                <div class="food-base">
-                  Base {{ item.food?.servingSize }}{{ item.food?.unit }}
-                </div>
-              </div>
-
-              <div class="food-quantity-wrap">
-                <input
-                  class="food-quantity-input"
-                  type="number"
-                  [value]="item.quantity"
-                  (input)="onQuantityChange(menuIdx, itemIdx, $event)"
-                  min="0.1"
-                  step="0.1"
-                />
-                <span class="food-quantity-unit">{{ item.food?.unit }}</span>
-              </div>
-
-              <div class="food-item-macros">
-                <div class="macro-badge kcal">
-                  🔥{{ calculateItemMacros(item).kcal | number: '1.0-0' }}kcal
-                </div>
-                <div class="macro-badge protein">
-                  {{ calculateItemMacros(item).protein | number: '1.0-1' }}g
-                </div>
-                <div class="macro-badge carb">
-                  {{ calculateItemMacros(item).carb | number: '1.0-1' }}g
-                </div>
-                <div class="macro-badge fat">
-                  {{ calculateItemMacros(item).fat | number: '1.0-1' }}g
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Daily Totals -->
-        <div class="daily-totals">
-          <div class="totals-main">
-            <div class="total-kcal">
-              {{ calculatePlanTotals().kcal | number: '1.0-0'
-              }}<span class="total-label">kcal</span>
-            </div>
-            <div class="totals-macros">
-              <div class="macro-total">
-                <span class="macro-value"
-                  >{{ calculatePlanTotals().protein | number: '1.0-0' }}g</span
-                >
-                <span class="macro-name">Protein</span>
-              </div>
-              <div class="macro-total">
-                <span class="macro-value"
-                  >{{ calculatePlanTotals().carb | number: '1.0-0' }}g</span
-                >
-                <span class="macro-name">Carbs</span>
-              </div>
-              <div class="macro-total">
-                <span class="macro-value"
-                  >{{ calculatePlanTotals().fat | number: '1.0-0' }}g</span
-                >
-                <span class="macro-name">Fat</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Empty State -->
-      <div *ngIf="plannedMenus.length === 0" class="empty-state">
-        <mat-icon>restaurant</mat-icon>
-        <div class="empty-state-text">No items planned for today</div>
-        <div class="empty-state-subtext">
-          Go to Menus tab and select items to plan
-        </div>
-      </div>
+        </app-swipe-row>
+      }
     </div>
-  </div>
+  }
+}
 
-  <!-- Floating Action Button -->
-  <button
-    *ngIf="activeTab === 'today'"
-    mat-mini-fab
-    class="fab-btn"
-    (click)="openAddMenuDialog()"
-  >
-    <mat-icon>add</mat-icon>
-  </button>
-</div>
+@if (!store.loading()) {
+  @if (segment() === 'plan') {
+    @if (store.plan().length) {
+      <button type="button" class="nub-fab fab-up" (click)="openPicker()">
+        <mat-icon>add</mat-icon>
+        Menu
+      </button>
+    }
+  } @else {
+    <button type="button" class="nub-fab" (click)="newMenu()">
+      <mat-icon>add</mat-icon>
+      New menu
+    </button>
+  }
+}

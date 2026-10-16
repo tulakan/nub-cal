@@ -1,337 +1,162 @@
-import { CommonModule } from '@angular/common';
 import {
   Component,
-  computed,
-  DestroyRef,
-  inject,
+  OnDestroy,
   OnInit,
+  computed,
+  inject,
   signal,
 } from '@angular/core';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
+import { ActivatedRoute } from '@angular/router';
 import { AddFoodComponent } from '../../dialogs/add-food/add-food.component';
+import { EditLoggedComponent } from '../../dialogs/edit-logged/edit-logged.component';
 import { TargetDialogComponent } from '../../dialogs/target-dialog/target-dialog.component';
-import { ConfirmDeleteDialogComponent } from './confirm-delete.dialog';
-import { Food } from '../../shared/interface/food.interface';
+import { ConfirmService } from '../../shared/components/confirm-dialog.component';
+import { MacroChipsComponent } from '../../shared/components/macro-chips.component';
+import { MacroSummaryComponent } from '../../shared/components/macro-summary.component';
+import { EmptyStateComponent } from '../../shared/components/primitives';
+import { SheetService } from '../../shared/components/sheet.service';
+import { SwipeRowComponent } from '../../shared/components/swipe-row.component';
+import { UndoService } from '../../shared/components/undo.service';
+import { LoggedFood } from '../../shared/interface/nutrition.interface';
 import {
-  LoggedFood,
-  TargetMacros,
-} from '../../shared/interface/nutrition.interface';
-import { MaterialModule } from '../../shared/modules/material.module';
-import { LocalStorageService } from '../../shared/services/local-storage.service';
-import { StoreService } from '../../stores/store.service';
+  KcalPipe,
+  MacroPipe,
+  formatThaiDate,
+} from '../../shared/pipes/format.pipes';
+import { ShellService } from '../../shared/services/shell.service';
+import { Macros, sumNutrition } from '../../shared/utils/nutrition';
+import { FoodLogStore } from '../../stores/food-log.store';
+import { MenuPlanStore } from '../../stores/menu-plan.store';
+
+type Row =
+  | { kind: 'item'; key: string; item: LoggedFood }
+  | {
+      kind: 'group';
+      key: string;
+      name: string;
+      items: LoggedFood[];
+      nutrition: Macros;
+    };
 
 @Component({
   selector: 'app-food-log',
   standalone: true,
-  imports: [MaterialModule, CommonModule],
+  imports: [
+    MacroChipsComponent,
+    MatIconModule,
+    MatMenuModule,
+    SwipeRowComponent,
+    MacroSummaryComponent,
+    EmptyStateComponent,
+    KcalPipe,
+    MacroPipe,
+  ],
   templateUrl: './food-log.component.html',
   styleUrls: ['./food-log.component.scss'],
 })
-export class FoodLogPage implements OnInit {
-  private destroyRef = inject(DestroyRef);
-  private localStorageService = inject(LocalStorageService);
-  private dialog = inject(MatDialog);
-  private snackBar = inject(MatSnackBar);
-  store = inject(StoreService);
+export class FoodLogPage implements OnInit, OnDestroy {
+  private sheets = inject(SheetService);
+  private undo = inject(UndoService);
+  private confirm = inject(ConfirmService);
+  private shell = inject(ShellService);
+  private route = inject(ActivatedRoute);
+  private plan = inject(MenuPlanStore);
+  log = inject(FoodLogStore);
 
-  // Make Math available in template
-  Math = Math;
+  expanded = signal<Set<string>>(new Set());
 
-  // Local storage keys
-  private readonly LOGGED_FOODS_KEY = 'food-log-logged-foods';
-  private readonly TARGET_MACROS_KEY = 'food-log-target-macros';
-
-  // Signals for reactive state management
-  targetMacros = signal<TargetMacros>({
-    kcal: 2000,
-    protein: 150,
-    carb: 250,
-    fat: 67,
+  rows = computed<Row[]>(() => {
+    const rows: Row[] = [];
+    for (const item of this.log.items()) {
+      const g = item.group;
+      const last = rows[rows.length - 1];
+      if (g && last?.kind === 'group' && last.key === g.id) {
+        last.items.push(item);
+        last.nutrition = sumNutrition(
+          last.items.map(i => i.calculatedNutrition)
+        );
+      } else if (g) {
+        rows.push({
+          kind: 'group',
+          key: g.id,
+          name: g.name,
+          items: [item],
+          nutrition: { ...item.calculatedNutrition },
+        });
+      } else {
+        rows.push({ kind: 'item', key: item.id!, item });
+      }
+    }
+    return rows;
   });
 
-  loggedFoods = signal<LoggedFood[]>([]);
-  allFoods = signal<Food[]>([]);
-  filteredFoods = signal<Food[]>([]);
-  expandedIndex = signal<number | null>(null);
-
-  // Computed values
-  totalConsumed = computed(() => {
-    const foods = this.loggedFoods();
-    return foods.reduce(
-      (acc, loggedFood) => ({
-        kcal: acc.kcal + loggedFood.calculatedNutrition.kcal,
-        protein: acc.protein + loggedFood.calculatedNutrition.protein,
-        carb: acc.carb + loggedFood.calculatedNutrition.carb,
-        fat: acc.fat + loggedFood.calculatedNutrition.fat,
-      }),
-      { kcal: 0, protein: 0, carb: 0, fat: 0 }
+  ngOnInit() {
+    this.plan.start(); // foods/menus for the add sheet
+    this.log.refreshDay();
+    this.shell.set(
+      [
+        {
+          icon: 'settings',
+          ariaLabel: 'Settings',
+          onClick: () => this.openSettings(),
+        },
+      ],
+      formatThaiDate(new Date(), 'day')
     );
-  });
-
-  remainingMacros = computed(() => {
-    const target = this.targetMacros();
-    const consumed = this.totalConsumed();
-    return {
-      kcal: target.kcal - consumed.kcal,
-      protein: target.protein - consumed.protein,
-      carb: target.carb - consumed.carb,
-      fat: target.fat - consumed.fat,
-    };
-  });
-
-  constructor() {}
-
-  async ngOnInit() {
-    this.loadFromLocalStorage();
+    if (this.route.snapshot.queryParamMap.get('add')) {
+      setTimeout(() => this.openAdd());
+    }
   }
 
-  openAddFoodDialog() {
-    const dialogRef = this.dialog.open(AddFoodComponent, {
-      width: '700px',
-      height: '90vh',
-      maxWidth: '95vw',
-      disableClose: false,
-      autoFocus: true,
-      data: {
-        currentTargets: this.targetMacros(),
-        currentConsumed: this.totalConsumed(),
-      },
-    });
+  ngOnDestroy() {
+    this.shell.clear();
+  }
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        const loggedFood: LoggedFood = {
-          food: result.food,
-          servingSize: result.servingSize,
-          calculatedNutrition: result.calculatedNutrition,
-        };
+  openAdd() {
+    this.sheets.open(AddFoodComponent);
+  }
 
-        // Add to logged foods
-        this.loggedFoods.update(foods => [...foods, loggedFood]);
+  openSettings() {
+    this.sheets.open(TargetDialogComponent);
+  }
 
-        // Save to local storage
-        this.saveToLocalStorage();
+  edit(item: LoggedFood) {
+    if (item.id) this.sheets.open(EditLoggedComponent, { id: item.id });
+  }
 
-        // Show success message
-        this.snackBar.open(`${result.food.name} added to your log`, 'Close', {
-          duration: 2000,
-        });
-      }
+  removeItem(item: LoggedFood) {
+    if (!item.id) return;
+    const removed = this.log.remove([item.id]);
+    this.undo.undoable(`${item.food.name} removed`, () =>
+      this.log.restore(removed)
+    );
+  }
+
+  removeGroup(row: Extract<Row, { kind: 'group' }>) {
+    const removed = this.log.remove(row.items.map(i => i.id!));
+    this.undo.undoable(`${row.name} removed`, () => this.log.restore(removed));
+  }
+
+  toggle(key: string) {
+    this.expanded.update(s => {
+      const next = new Set(s);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
     });
   }
 
-  removeFood(index: number) {
-    const foodName = this.loggedFoods()[index]?.food.name;
-    this.loggedFoods.update(foods => foods.filter((_, i) => i !== index));
-    this.saveToLocalStorage();
-    this.expandedIndex.set(null);
-
-    if (foodName) {
-      this.snackBar.open(`${foodName} removed from your log`, 'Undo', {
-        duration: 3000,
-      });
-    }
-  }
-
-  toggleExpanded(index: number) {
-    this.expandedIndex.set(this.expandedIndex() === index ? null : index);
-  }
-
-  confirmDelete(index: number) {
-    const food = this.loggedFoods()[index];
-    if (!food) return;
-
-    const dialogRef = this.dialog.open(ConfirmDeleteDialogComponent, {
-      width: '280px',
-      maxWidth: '90vw',
-      disableClose: false,
-      data: { foodName: food.food.name },
+  async clearAll() {
+    if (!this.log.items().length) return;
+    const ok = await this.confirm.ask({
+      title: "Clear today's log?",
+      message: 'All foods logged today will be removed.',
+      confirmLabel: 'Clear',
+      destructive: true,
     });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result === true) {
-        this.removeFood(index);
-      }
-    });
-  }
-
-  openTargetDialog() {
-    const dialogRef = this.dialog.open(TargetDialogComponent, {
-      width: '500px',
-      maxHeight: '80vh',
-      maxWidth: '90vw',
-      data: {
-        currentTargets: this.targetMacros(),
-      },
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.targetMacros.set(result);
-        this.saveToLocalStorage();
-      }
-    });
-  }
-
-  getProgressPercentage(current: number, target: number): number {
-    return Math.min((current / target) * 100, 100);
-  }
-
-  getMacroStatus(
-    current: number,
-    target: number
-  ): 'primary' | 'accent' | 'warn' {
-    const percentage = (current / target) * 100;
-    if (percentage < 80) return 'primary';
-    if (percentage <= 100) return 'accent';
-    return 'warn';
-  }
-
-  // Local Storage Methods
-  private saveToLocalStorage() {
-    try {
-      localStorage.setItem(
-        this.LOGGED_FOODS_KEY,
-        JSON.stringify(this.loggedFoods())
-      );
-      localStorage.setItem(
-        this.TARGET_MACROS_KEY,
-        JSON.stringify(this.targetMacros())
-      );
-    } catch (error) {
-      console.error('Error saving to local storage:', error);
-    }
-  }
-
-  private loadFromLocalStorage() {
-    try {
-      // Load logged foods
-      const savedLoggedFoods = localStorage.getItem(this.LOGGED_FOODS_KEY);
-      if (savedLoggedFoods) {
-        const loggedFoods = JSON.parse(savedLoggedFoods) as LoggedFood[];
-        this.loggedFoods.set(loggedFoods);
-      }
-
-      // Load target macros
-      const savedTargetMacros = localStorage.getItem(this.TARGET_MACROS_KEY);
-      if (savedTargetMacros) {
-        const targetMacros = JSON.parse(savedTargetMacros) as TargetMacros;
-        this.targetMacros.set(targetMacros);
-      }
-    } catch (error) {
-      console.error('Error loading from local storage:', error);
-    }
-  }
-
-  // Reset Methods with Confirmation
-  resetLoggedFoods() {
-    if (this.loggedFoods().length === 0) {
-      this.snackBar.open('No foods to clear', 'Close', { duration: 2000 });
-      return;
-    }
-
-    if (
-      confirm(
-        'Are you sure you want to clear all logged foods? This action cannot be undone.'
-      )
-    ) {
-      this.loggedFoods.set([]);
-      this.saveToLocalStorage();
-      this.snackBar.open('All logged foods cleared successfully', 'Close', {
-        duration: 3000,
-      });
-    }
-  }
-
-  resetTargetMacros() {
-    if (
-      confirm('Are you sure you want to reset your targets to default values?')
-    ) {
-      const defaultTargets: TargetMacros = {
-        kcal: 2000,
-        protein: 150,
-        carb: 250,
-        fat: 67,
-      };
-      this.targetMacros.set(defaultTargets);
-      this.saveToLocalStorage();
-      this.snackBar.open('Target macros reset to defaults', 'Close', {
-        duration: 3000,
-      });
-    }
-  }
-
-  resetAll() {
-    if (
-      confirm(
-        'Are you sure you want to reset everything? This will clear all logged foods and reset targets to defaults. This action cannot be undone.'
-      )
-    ) {
-      const defaultTargets: TargetMacros = {
-        kcal: 2000,
-        protein: 150,
-        carb: 250,
-        fat: 67,
-      };
-      this.loggedFoods.set([]);
-      this.targetMacros.set(defaultTargets);
-      this.saveToLocalStorage();
-      this.snackBar.open('Everything has been reset successfully', 'Close', {
-        duration: 3000,
-      });
-    }
-  }
-
-  // Clear local storage completely
-  clearLocalStorage() {
-    if (
-      confirm(
-        'Are you sure you want to permanently delete all your food log data? This action cannot be undone and will remove all saved information.'
-      )
-    ) {
-      try {
-        localStorage.removeItem(this.LOGGED_FOODS_KEY);
-        localStorage.removeItem(this.TARGET_MACROS_KEY);
-        const defaultTargets: TargetMacros = {
-          kcal: 2000,
-          protein: 150,
-          carb: 250,
-          fat: 67,
-        };
-        this.loggedFoods.set([]);
-        this.targetMacros.set(defaultTargets);
-        this.snackBar.open('All data cleared and reset to defaults', 'Close', {
-          duration: 3000,
-        });
-      } catch (error) {
-        console.error('Error clearing local storage:', error);
-        this.snackBar.open('Error clearing data. Please try again.', 'Close', {
-          duration: 3000,
-        });
-      }
-    }
-  }
-
-  clearFoodLogs() {
-    if (
-      confirm(
-        'Are you sure you want to permanently delete all your food log data? This action cannot be undone and will remove all saved information.'
-      )
-    ) {
-      try {
-        localStorage.removeItem(this.LOGGED_FOODS_KEY);
-        this.loggedFoods.set([]);
-
-        this.snackBar.open('All food log data cleared ', 'Close', {
-          duration: 3000,
-        });
-      } catch (error) {
-        console.error('Error clearing local storage:', error);
-        this.snackBar.open('Error clearing data. Please try again.', 'Close', {
-          duration: 3000,
-        });
-      }
-    }
+    if (!ok) return;
+    const prev = this.log.clear();
+    this.undo.undoable("Today's log cleared", () => this.log.setAll(prev));
   }
 }

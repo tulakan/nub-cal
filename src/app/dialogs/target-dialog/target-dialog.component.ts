@@ -1,101 +1,173 @@
-import { CommonModule } from '@angular/common';
-import { Component, inject, Inject, OnInit } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { MatBottomSheetRef } from '@angular/material/bottom-sheet';
+import { MatIconModule } from '@angular/material/icon';
+import { Router } from '@angular/router';
+import * as packageInfo from '../../../../package.json';
+import { ConfirmService } from '../../shared/components/confirm-dialog.component';
+import { GuideSheetComponent } from '../../shared/components/guide.component';
+import { SheetComponent } from '../../shared/components/sheet.component';
+import { SheetService } from '../../shared/components/sheet.service';
+import { UndoService } from '../../shared/components/undo.service';
+import { DemoService } from '../../shared/services/demo.service';
 import {
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { DialogLayoutComponent } from '../../shared/components/dialog-layout.component';
-import { TargetMacros } from '../../shared/interface/nutrition.interface';
-import { MaterialModule } from '../../shared/modules/material.module';
+  SessionService,
+  authErrorMessage,
+} from '../../shared/services/session.service';
+import { UserDataService } from '../../shared/services/user-data.service';
+import { FoodLogStore } from '../../stores/food-log.store';
+import { ProfileStore } from '../../stores/profile.store';
 
-export interface TargetDialogData {
-  currentTargets: TargetMacros;
-}
-
+/** Settings sheet: daily targets, help, account, data, about. */
 @Component({
   selector: 'app-target-dialog',
   standalone: true,
-  imports: [
-    MaterialModule,
-    ReactiveFormsModule,
-    CommonModule,
-    DialogLayoutComponent,
-  ],
+  imports: [SheetComponent, MatIconModule],
   templateUrl: './target-dialog.component.html',
   styleUrls: ['./target-dialog.component.scss'],
 })
 export class TargetDialogComponent implements OnInit {
-  private fb = inject(FormBuilder);
-  private snackBar = inject(MatSnackBar);
-  private dialogRef = inject(MatDialogRef<TargetDialogComponent>);
+  private ref = inject(MatBottomSheetRef<TargetDialogComponent>);
+  private undo = inject(UndoService);
+  private confirm = inject(ConfirmService);
+  private sheets = inject(SheetService);
+  private router = inject(Router);
+  private data = inject(UserDataService);
+  session = inject(SessionService);
+  log = inject(FoodLogStore);
+  profile = inject(ProfileStore);
+  private demo = inject(DemoService);
 
-  targetForm!: FormGroup;
+  kcal = signal(this.log.targets().kcal);
+  protein = signal(this.log.targets().protein);
+  carb = signal(this.log.targets().carb);
+  fat = signal(this.log.targets().fat);
 
-  constructor(@Inject(MAT_DIALOG_DATA) public data: TargetDialogData) {}
+  version = (packageInfo as { version: string }).version;
 
-  ngOnInit() {
-    this.initializeForm();
+  // guest upgrade
+  newEmail = signal('');
+  newPassword = signal('');
+  upgrading = signal(false);
+  upgradeError = signal('');
+
+  legacy = signal(false);
+  importing = signal(false);
+
+  fromMacros = computed(() =>
+    Math.round(this.protein() * 4 + this.carb() * 4 + this.fat() * 9)
+  );
+  mismatch = computed(
+    () =>
+      Math.abs(this.fromMacros() - this.kcal()) > 50 && this.fromMacros() > 0
+  );
+  split = computed(() => {
+    const total = this.fromMacros() || 1;
+    return {
+      p: Math.round((this.protein() * 4 * 100) / total),
+      c: Math.round((this.carb() * 4 * 100) / total),
+      f: Math.round((this.fat() * 9 * 100) / total),
+    };
+  });
+  valid = computed(
+    () =>
+      this.kcal() > 0 && this.protein() > 0 && this.carb() > 0 && this.fat() > 0
+  );
+
+  async ngOnInit() {
+    if (!this.session.isGuest())
+      this.legacy.set(await this.data.legacyAvailable());
   }
 
-  private initializeForm() {
-    this.targetForm = this.fb.group({
-      kcal: [
-        this.data.currentTargets.kcal,
-        [Validators.required, Validators.min(1)],
-      ],
-      protein: [
-        this.data.currentTargets.protein,
-        [Validators.required, Validators.min(1)],
-      ],
-      carb: [
-        this.data.currentTargets.carb,
-        [Validators.required, Validators.min(1)],
-      ],
-      fat: [
-        this.data.currentTargets.fat,
-        [Validators.required, Validators.min(1)],
-      ],
+  set(field: 'kcal' | 'protein' | 'carb' | 'fat', raw: string) {
+    const n = parseFloat(raw);
+    this[field].set(isNaN(n) ? 0 : n);
+  }
+
+  useMacroKcal() {
+    this.kcal.set(this.fromMacros());
+  }
+
+  recalc() {
+    this.ref.dismiss();
+    this.router.navigate(['/welcome'], { queryParams: { mode: 'targets' } });
+  }
+
+  guide() {
+    this.ref.dismiss();
+    this.sheets.open(GuideSheetComponent);
+  }
+
+  async save() {
+    if (!this.valid()) return;
+    await this.log.setTargets({
+      kcal: this.kcal(),
+      protein: this.protein(),
+      carb: this.carb(),
+      fat: this.fat(),
     });
+    this.undo.notify('Targets saved');
+    this.ref.dismiss();
   }
 
-  updateTargets() {
-    if (this.targetForm.valid) {
-      const updatedTargets: TargetMacros = this.targetForm.value;
-      this.dialogRef.close(updatedTargets);
-      this.snackBar.open('Target macros updated successfully', 'Close', {
-        duration: 2000,
-      });
+  async upgrade() {
+    if (this.upgrading()) return;
+    this.upgrading.set(true);
+    this.upgradeError.set('');
+    try {
+      await this.session.upgradeGuest(
+        this.newEmail().trim(),
+        this.newPassword()
+      );
+      if (this.profile.profile()?.demo)
+        await this.profile.update({ demo: false });
+      this.undo.notify('Account created. Your data is saved.');
+    } catch (e) {
+      this.upgradeError.set(authErrorMessage(e));
+    } finally {
+      this.upgrading.set(false);
     }
   }
 
-  resetTargets() {
-    const defaultTargets: TargetMacros = {
-      kcal: 2000,
-      protein: 150,
-      carb: 250,
-      fat: 67,
-    };
-    this.targetForm.patchValue(defaultTargets);
+  async importLegacy() {
+    const ok = await this.confirm.ask({
+      title: 'Import previous data?',
+      message:
+        'Copies foods, menus and progress entries from the previous version into this account.',
+      confirmLabel: 'Import',
+    });
+    if (!ok) return;
+    this.importing.set(true);
+    try {
+      const r = await this.data.importLegacy();
+      this.undo.notify(
+        `Imported ${r.foods} foods, ${r.menus} menus, ${r.body + r.measurements} entries`
+      );
+    } catch (e) {
+      console.error(e);
+      this.undo.notify('Import failed. Please try again.');
+    } finally {
+      this.importing.set(false);
+    }
   }
 
-  onCancel() {
-    this.dialogRef.close();
+  async exitDemo() {
+    this.ref.dismiss();
+    await this.demo.exit();
   }
 
-  // Dialog layout event handlers
-  onSave() {
-    this.updateTargets();
-  }
-
-  onReset() {
-    this.resetTargets();
-  }
-
-  onCloseDialog() {
-    this.dialogRef.close();
+  async logout() {
+    if (this.session.isGuest()) {
+      const ok = await this.confirm.ask({
+        title: 'Log out of guest account?',
+        message:
+          'Guest data cannot be recovered after logging out. Create an account first to keep it.',
+        confirmLabel: 'Log out',
+        destructive: true,
+      });
+      if (!ok) return;
+    }
+    this.ref.dismiss();
+    await this.session.logout();
+    this.router.navigate(['/login']);
   }
 }

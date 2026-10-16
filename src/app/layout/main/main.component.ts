@@ -1,167 +1,276 @@
-import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
-import { Router, RouterOutlet } from '@angular/router';
-import * as packageInfo from '../../../../package.json';
-import { MaterialModule } from '../../shared/modules/material.module';
-import { ThemeService } from '../../shared/services/theme.service';
+import { Component, computed, inject } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { MatRippleModule } from '@angular/material/core';
+import { MatIconModule } from '@angular/material/icon';
+import {
+  NavigationEnd,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+  RouterOutlet,
+} from '@angular/router';
+import { filter, map, startWith } from 'rxjs';
+import { DemoService } from '../../shared/services/demo.service';
+import { ShellService } from '../../shared/services/shell.service';
+import { ProfileStore } from '../../stores/profile.store';
+
+interface NavItem {
+  path: string;
+  label: string;
+  icon: string;
+}
 
 @Component({
   selector: 'app-main',
   standalone: true,
-  imports: [RouterOutlet, MaterialModule, CommonModule],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    MatIconModule,
+    MatRippleModule,
+  ],
   template: `
-    <div class="full-page-container">
-      <mat-toolbar class="main-toolbar" color="primary">
-        <!-- <button mat-icon-button>
-          <mat-icon>menu</mat-icon>
-        </button> -->
-        <span>{{ pageTitle }}</span>
-        <span class="spacer"></span>
-        <!-- <span class="version-text">v{{ version }}</span> -->
-        <!-- <button
-          mat-icon-button
-          (click)="toggleTheme()"
-          matTooltip="Toggle theme"
-        >
-          <mat-icon>{{
-            (themeService.isDarkTheme$ | async) ? 'light_mode' : 'dark_mode'
-          }}</mat-icon>
-        </button> -->
-      </mat-toolbar>
-      <div class="content-container">
-        <router-outlet></router-outlet>
-      </div>
-      <div class="footer bg-surface">
-        <nav class="bottom-nav">
+    <div class="shell">
+      <header class="header">
+        @if (data().back; as back) {
           <button
-            mat-icon-button
-            (click)="navigateToFoodLog()"
-            matTooltip="Food Log"
+            type="button"
+            class="icon-btn"
+            aria-label="Back"
+            (click)="goBack(back)"
           >
-            <mat-icon>restaurant</mat-icon>
+            <mat-icon>arrow_back</mat-icon>
           </button>
+        }
+        <div class="title-wrap">
+          <div class="title">{{ data().title }}</div>
+          @if (shell.subtitle()) {
+            <div class="subtitle">{{ shell.subtitle() }}</div>
+          }
+        </div>
+        @if (profile.profile()?.demo) {
           <button
-            mat-icon-button
-            (click)="navigateToMenuPlan()"
-            matTooltip="Menu & Plan"
+            type="button"
+            class="demo"
+            aria-label="Demo mode. Tap to exit."
+            [disabled]="demo.exiting()"
+            (click)="demo.exit()"
           >
-            <mat-icon>restaurant_menu</mat-icon>
+            Demo <span aria-hidden="true">✕</span>
           </button>
-          <button
-            mat-icon-button
-            (click)="navigateToFoodList()"
-            matTooltip="Food List"
-          >
-            <mat-icon>list_alt</mat-icon>
-          </button>
-          <button
-            mat-icon-button
-            matTooltip="Body Composition"
-            (click)="navigateToBodyComposition()"
-          >
-            <mat-icon>monitor_weight</mat-icon>
-          </button>
-          <button
-            mat-icon-button
-            matTooltip="Circumference"
-            (click)="navigateToCircumference()"
-          >
-            <mat-icon>straighten</mat-icon>
-          </button>
+        }
+        @for (a of shell.actions(); track a.ariaLabel) {
+          @if (a.icon) {
+            <button
+              type="button"
+              class="icon-btn"
+              [attr.aria-label]="a.ariaLabel"
+              [disabled]="a.disabled?.()"
+              (click)="a.onClick()"
+            >
+              <mat-icon>{{ a.icon }}</mat-icon>
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="text-btn"
+              [attr.aria-label]="a.ariaLabel"
+              [disabled]="a.disabled?.()"
+              (click)="a.onClick()"
+            >
+              {{ a.label }}
+            </button>
+          }
+        }
+      </header>
+
+      <main class="content">
+        <router-outlet />
+      </main>
+
+      @if (data().nav !== false) {
+        <nav class="nav" aria-label="Main">
+          @for (n of items; track n.path) {
+            <a
+              matRipple
+              class="nav-item"
+              [routerLink]="n.path"
+              routerLinkActive="active"
+              ariaCurrentWhenActive="page"
+            >
+              <mat-icon>{{ n.icon }}</mat-icon>
+              <span>{{ n.label }}</span>
+            </a>
+          }
         </nav>
-      </div>
+      }
     </div>
   `,
   styles: `
-    .full-page-container {
-      width: 100%;
-      height: 100%;
-      margin: 0 auto;
+    .shell {
       display: flex;
       flex-direction: column;
-      justify-content: flex-start;
-      align-items: center;
-    }
-
-    .main-toolbar {
-      min-height: 44px;
-      height: 44px;
-    }
-    .spacer {
-      flex: 1 1 auto;
-    }
-
-    .version-text {
-      font-size: 0.8em;
-      opacity: 0.8;
-    }
-
-    .content-container {
-      flex-grow: 1;
+      height: 100dvh;
       width: 100%;
-      padding: var(--space-xs);
-      overflow-y: scroll;
+      max-width: var(--app-w);
+      margin: 0 auto;
+      background: var(--c-white);
     }
-
-    .footer {
-      width: 100%;
-      height: 52px;
-      // border-top: 1px solid var(--text-secondary);
+    @media (min-width: 600px) {
+      .shell {
+        border-inline: var(--border);
+      }
+    }
+    .header {
+      flex: none;
       display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      min-height: calc(var(--header-h) + var(--safe-top));
+      padding: var(--safe-top) var(--space-sm) 0 var(--space-lg);
+      background: var(--c-white);
+      border-bottom: var(--border);
+    }
+    .header:has(.icon-btn:first-child) {
+      padding-left: var(--space-xs);
+    }
+    .title-wrap {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-sm);
+    }
+    .title {
+      font-size: var(--fs-subtitle);
+      font-weight: 700;
+      color: var(--c-black);
+      white-space: nowrap;
+    }
+    .subtitle {
+      font-size: var(--fs-body-sm);
+      color: var(--c-gray-600);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+      border: 0;
+      background: transparent;
+      border-radius: 50%;
+      color: var(--c-gray-800);
+      display: inline-flex;
       align-items: center;
       justify-content: center;
+      cursor: pointer;
     }
-
-    .bottom-nav {
+    .text-btn {
+      min-height: 44px;
+      padding: 0 var(--space-md);
+      border: 0;
+      background: transparent;
+      font: inherit;
+      font-size: var(--fs-body);
+      font-weight: 500;
+      color: var(--c-black);
+      cursor: pointer;
+    }
+    .demo {
+      min-height: 28px;
+      padding: 0 var(--space-sm);
+      border: 0;
+      border-radius: 14px;
+      background: var(--c-carb-bg);
+      color: var(--c-carb-text);
+      font: inherit;
+      font-size: var(--fs-caption);
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .icon-btn:disabled,
+    .text-btn:disabled {
+      opacity: 0.4;
+    }
+    .content {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: var(--space-sm) var(--space-sm) calc(var(--space-xl) + 56px);
+    }
+    .nav {
+      flex: none;
       display: flex;
-      gap: var(--space-md);
-      width: 100%;
-      max-width: 400px;
-      justify-content: space-evenly;
+      height: calc(var(--nav-h) + var(--safe-bottom));
+      padding-bottom: var(--safe-bottom);
+      background: var(--c-white);
+      border-top: var(--border);
+    }
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      color: var(--c-gray-600);
+      text-decoration: none;
+      font-size: var(--fs-caption);
+    }
+    .nav-item mat-icon {
+      width: 56px;
+      height: 28px;
+      font-size: 22px;
+      line-height: 28px;
+      text-align: center;
+      border-radius: 14px;
+      transition: background-color 150ms ease;
+    }
+    .nav-item.active {
+      color: var(--c-primary-ink);
+      font-weight: 700;
+    }
+    .nav-item.active mat-icon {
+      background: var(--c-primary);
     }
   `,
 })
 export class MainComponent {
   private router = inject(Router);
-  version = packageInfo.version;
+  shell = inject(ShellService);
+  profile = inject(ProfileStore);
+  demo = inject(DemoService);
 
-  get pageTitle(): string {
-    const url = this.router.url;
-    if (url.includes('food-log')) return 'Food Log';
-    if (url.includes('menu-create')) return 'Create Menu';
-    if (url.includes('menu-edit')) return 'Edit Menu';
-    if (url.includes('menu-plan')) return 'Menu & Plan';
-    if (url.includes('food-list')) return 'Food List';
-    if (url.includes('body-composition')) return 'Body Composition';
-    if (url.includes('circumference')) return 'Circumference';
-    return 'Nub Cal';
-  }
+  items: NavItem[] = [
+    { path: '/today', label: 'Today', icon: 'restaurant' },
+    { path: '/plan', label: 'Plan', icon: 'event_note' },
+    { path: '/foods', label: 'Foods', icon: 'menu_book' },
+    { path: '/progress', label: 'Progress', icon: 'show_chart' },
+  ];
 
-  constructor(public themeService: ThemeService) {}
+  private routeData = toSignal(
+    this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd),
+      startWith(null),
+      map(() => {
+        let r = this.router.routerState.snapshot.root;
+        while (r.firstChild) r = r.firstChild;
+        return r.data as { title?: string; nav?: boolean; back?: string };
+      })
+    ),
+    { initialValue: {} as { title?: string; nav?: boolean; back?: string } }
+  );
 
-  toggleTheme(): void {
-    this.themeService.toggleTheme();
-  }
+  data = computed(() => ({
+    title: this.routeData().title ?? 'Nub Cal',
+    nav: this.routeData().nav,
+    back: this.routeData().back,
+  }));
 
-  navigateToFoodLog(): void {
-    this.router.navigate(['/food-log']);
-  }
-
-  navigateToMenuPlan(): void {
-    this.router.navigate(['/menu-plan']);
-  }
-
-  navigateToFoodList(): void {
-    this.router.navigate(['/food-list']);
-  }
-
-  navigateToBodyComposition(): void {
-    this.router.navigate(['/body-composition']);
-  }
-
-  navigateToCircumference(): void {
-    this.router.navigate(['/circumference']);
+  goBack(path: string) {
+    this.router.navigateByUrl(path);
   }
 }
-
-// todo: target / add food log to dialog / move remain kcal to top and re ui /

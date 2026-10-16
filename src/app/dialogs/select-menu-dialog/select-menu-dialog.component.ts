@@ -1,40 +1,30 @@
-import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { MatBottomSheetRef } from '@angular/material/bottom-sheet';
+import { MenuPlanStore } from '../../stores/menu-plan.store';
+import { MenuPickerComponent } from '../../shared/components/menu-picker.component';
+import { SheetComponent } from '../../shared/components/sheet.component';
+import { UndoService } from '../../shared/components/undo.service';
 import { Menu } from '../../shared/interface/menu.interface';
-import { MaterialModule } from '../../shared/modules/material.module';
 
+/** Pick a saved menu and add it to today's plan. */
 @Component({
   selector: 'app-select-menu-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialModule],
-  templateUrl: './select-menu-dialog.component.html',
-  styleUrls: ['./select-menu-dialog.component.scss'],
+  imports: [SheetComponent, MenuPickerComponent],
+  template: `
+    <app-sheet title="Add menu to plan">
+      <app-menu-picker (pick)="add($event)" />
+    </app-sheet>
+  `,
 })
 export class SelectMenuDialogComponent {
-  private dialogRef = inject(MatDialogRef<SelectMenuDialogComponent>);
-  private data: { menus: Menu[] } = inject(MAT_DIALOG_DATA);
+  private ref = inject(MatBottomSheetRef<SelectMenuDialogComponent>);
+  private store = inject(MenuPlanStore);
+  private undo = inject(UndoService);
 
-  searchQuery = '';
-  filteredMenus: Menu[] = [...this.data.menus];
-
-  filterMenus() {
-    if (!this.searchQuery.trim()) {
-      this.filteredMenus = [...this.data.menus];
-    } else {
-      const query = this.searchQuery.toLowerCase();
-      this.filteredMenus = this.data.menus.filter(menu =>
-        menu.name.toLowerCase().includes(query)
-      );
-    }
-  }
-
-  selectMenu(menu: Menu) {
-    this.dialogRef.close(menu);
-  }
-
-  close() {
-    this.dialogRef.close();
+  add(menu: Menu) {
+    const id = this.store.addToPlan(menu);
+    this.undo.undoable(`${menu.name} added to plan`, () => this.store.removeInstance(id));
+    this.ref.dismiss();
   }
 }

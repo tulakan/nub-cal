@@ -1,228 +1,229 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTableModule } from '@angular/material/table';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { FoodInfoComponent } from '../../dialogs/food-info/food-info.component';
+import { ConfirmService } from '../../shared/components/confirm-dialog.component';
+import { MacroChipsComponent } from '../../shared/components/macro-chips.component';
+import {
+  EmptyStateComponent,
+  SkeletonComponent,
+} from '../../shared/components/primitives';
+import { SheetService } from '../../shared/components/sheet.service';
+import { SwipeRowComponent } from '../../shared/components/swipe-row.component';
+import { UndoService } from '../../shared/components/undo.service';
 import { Food } from '../../shared/interface/food.interface';
+import { KcalPipe, MacroPipe } from '../../shared/pipes/format.pipes';
 import { FoodService } from '../../shared/services/food.service';
+import { MenuPlanStore } from '../../stores/menu-plan.store';
+
+const norm = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
 
 @Component({
   selector: 'app-food-list',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule,
-    MatTableModule,
-    MatInputModule,
-    MatFormFieldModule,
-    MatButtonModule,
+    MacroChipsComponent,
     MatIconModule,
-    MatToolbarModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatTooltipModule,
-    MatCardModule,
+    SwipeRowComponent,
+    EmptyStateComponent,
+    SkeletonComponent,
+    KcalPipe,
+    MacroPipe,
   ],
-  templateUrl: './food-list.component.html',
-  styleUrls: ['./food-list.component.scss'],
-})
-export class FoodListComponent implements OnInit, OnDestroy {
-  private foodService = inject(FoodService);
-  private snackBar = inject(MatSnackBar);
-  private dialog = inject(MatDialog);
+  template: `
+    <div class="search">
+      <mat-icon>search</mat-icon>
+      <input
+        type="text"
+        placeholder="Search foods"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+        enterkeyhint="search"
+        [value]="query()"
+        (input)="query.set($any($event.target).value)"
+      />
+      @if (query()) {
+        <button
+          type="button"
+          class="clear"
+          aria-label="Clear search"
+          (click)="query.set('')"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+    <div class="count cap-text">{{ shown().length }} foods</div>
 
-  displayedColumns: string[] = [
-    'name',
-    'kcal',
-    'servingSizeUnit',
-    'protein',
-    'carb',
-    'fat',
-    'actions',
-  ];
-  dataSource: Food[] = [];
-  filteredData: Food[] = [];
-  searchTerm: string = '';
-  isLoading: boolean = false;
-  isMobile: boolean = false;
-  private unsubscribe?: () => void;
-  private searchTimeout?: number;
+    @if (store.loading()) {
+      <app-skeleton [count]="6" />
+    } @else if (!shown().length) {
+      <app-empty-state
+        [icon]="query() ? 'search_off' : 'menu_book'"
+        [title]="query() ? 'No foods found' : 'No foods yet'"
+        [hint]="
+          query()
+            ? 'Try a different name or add it as new'
+            : 'Add your first food to get started'
+        "
+      >
+        <button type="button" class="nub-btn cta" (click)="open()">
+          Add food
+        </button>
+      </app-empty-state>
+    } @else {
+      <div class="list">
+        @for (f of shown(); track f.id) {
+          <app-swipe-row [confirm]="true" (delete)="remove(f)">
+            <button type="button" class="item nub-row-btn" (click)="open(f)">
+              <div class="l1">
+                <span class="name">{{ f.name }}</span>
+                <span class="kcal num">{{ f.kcal | kcal }}</span>
+              </div>
+              <div class="l2 num">
+                <span class="amt">per {{ f.servingSize }} {{ f.unit }}</span>
+                <app-macro-chips
+                  [protein]="f.protein"
+                  [carb]="f.carb"
+                  [fat]="f.fat"
+                  [decimals]="1"
+                />
+              </div>
+            </button>
+          </app-swipe-row>
+        }
+      </div>
+    }
+
+    <button type="button" class="nub-fab" (click)="open()">
+      <mat-icon>add</mat-icon>
+      Food
+    </button>
+  `,
+  styles: `
+    .search {
+      position: sticky;
+      top: calc(var(--space-sm) * -1);
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      background: var(--c-gray-100);
+      border-radius: var(--radius-md);
+      padding: 0 var(--space-xs) 0 var(--space-md);
+      height: 44px;
+      margin-top: var(--space-xs);
+    }
+    .search mat-icon {
+      color: var(--c-gray-600);
+      flex: none;
+    }
+    .search input {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      height: 100%;
+    }
+    .clear {
+      width: 40px;
+      height: 40px;
+      border: 0;
+      background: transparent;
+      color: var(--c-gray-600);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .count {
+      padding: var(--space-sm) var(--space-xs);
+    }
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+    .item {
+      flex-direction: column;
+      gap: 2px;
+      padding: var(--space-md);
+      border: var(--border);
+      border-radius: var(--radius-md);
+      min-height: 56px;
+    }
+    .l1 {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: var(--space-sm);
+    }
+    .name {
+      font-size: var(--fs-body);
+      font-weight: 500;
+      color: var(--c-black);
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .kcal {
+      font-size: var(--fs-body);
+      font-weight: 500;
+    }
+    .l2 {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+      font-size: var(--fs-body-sm);
+      color: var(--c-gray-600);
+    }
+    .cta {
+      width: auto;
+      padding: 0 var(--space-xl);
+    }
+  `,
+})
+export class FoodListComponent implements OnInit {
+  private sheets = inject(SheetService);
+  private confirm = inject(ConfirmService);
+  private undo = inject(UndoService);
+  private foods = inject(FoodService);
+  store = inject(MenuPlanStore);
+
+  query = signal('');
+  shown = computed(() => {
+    const q = norm(this.query().trim());
+    const all = [...this.store.foods()].sort((a, b) =>
+      a.name.localeCompare(b.name, 'th')
+    );
+    return q ? all.filter(f => norm(f.name).includes(q)) : all;
+  });
 
   ngOnInit() {
-    this.loadFoods();
-    this.checkScreenSize();
-    window.addEventListener('resize', () => this.checkScreenSize());
+    this.store.start();
   }
 
-  ngOnDestroy() {
-    if (this.unsubscribe) {
-      this.unsubscribe();
-    }
-    if (this.searchTimeout) {
-      window.clearTimeout(this.searchTimeout);
-    }
-    window.removeEventListener('resize', () => this.checkScreenSize());
+  open(food?: Food) {
+    this.sheets.open(FoodInfoComponent, { food });
   }
 
-  loadFoods() {
-    this.isLoading = true;
-
-    // Use real-time search listener for live updates with search capability
-    this.setupRealtimeSearch();
-  }
-
-  private setupRealtimeSearch() {
-    if (this.unsubscribe) {
-      this.unsubscribe();
-    }
-
-    this.unsubscribe = this.foodService.searchFoodsRealtime(
-      this.searchTerm,
-      (foods: Food[]) => {
-        this.dataSource = foods;
-        this.filteredData = foods;
-        this.isLoading = false;
-      }
-    );
-  }
-  onSearchChange() {
-    // Debounce search to avoid too many calls
-    if (this.searchTimeout) {
-      clearTimeout(this.searchTimeout);
-    }
-
-    this.searchTimeout = window.setTimeout(() => {
-      this.performSearch();
-    }, 300); // 300ms debounce
-  }
-
-  private performSearch() {
-    this.isLoading = true;
-    this.setupRealtimeSearch();
-  }
-
-  addFood() {
-    const dialogRef = this.dialog.open(FoodInfoComponent, {
-      width: '450px',
-      maxHeight: '80vh',
-      maxWidth: '95vw',
-      data: { isEdit: false },
-      disableClose: true,
+  async remove(food: Food) {
+    const ok = await this.confirm.ask({
+      title: `Delete "${food.name}"?`,
+      message: 'Menus that use this food will skip it.',
+      confirmLabel: 'Delete',
+      destructive: true,
     });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.handleAddFood(result);
-      }
-    });
-  }
-
-  editFood(food: Food) {
-    const dialogRef = this.dialog.open(FoodInfoComponent, {
-      width: '450px',
-      maxHeight: '80vh',
-      maxWidth: '95vw',
-      data: { food, isEdit: true },
-      disableClose: true,
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.handleUpdateFood(result);
-      }
-    });
-  }
-
-  deleteFood(food: Food) {
-    const confirmDelete = confirm(
-      `Are you sure you want to delete "${food.name}"? This action cannot be undone.`
-    );
-
-    if (confirmDelete) {
-      this.handleDeleteFood(food);
-    }
-  }
-
-  private async handleAddFood(foodData: Food) {
+    if (!ok) return;
     try {
-      await this.foodService.addFood(foodData);
-      this.snackBar.open(`Successfully added "${foodData.name}"`, 'Close', {
-        duration: 3000,
-        panelClass: ['success-snackbar'],
-      });
-    } catch (error) {
-      console.error('Error adding food:', error);
-      this.snackBar.open(
-        `Failed to add "${foodData.name}". Please try again.`,
-        'Close',
-        {
-          duration: 5000,
-          panelClass: ['error-snackbar'],
-        }
-      );
+      await this.foods.deleteFood(food.id);
+      this.undo.notify(`${food.name} deleted`);
+    } catch {
+      this.undo.notify('Could not delete. Please try again.');
     }
-  }
-
-  private async handleUpdateFood(foodData: Food) {
-    try {
-      await this.foodService.updateFood(foodData.id, foodData);
-      this.snackBar.open(`Successfully updated "${foodData.name}"`, 'Close', {
-        duration: 3000,
-        panelClass: ['success-snackbar'],
-      });
-    } catch (error) {
-      console.error('Error updating food:', error);
-      this.snackBar.open(
-        `Failed to update "${foodData.name}". Please try again.`,
-        'Close',
-        {
-          duration: 5000,
-          panelClass: ['error-snackbar'],
-        }
-      );
-    }
-  }
-
-  private async handleDeleteFood(food: Food) {
-    try {
-      await this.foodService.deleteFood(food.id);
-      this.snackBar.open(`Successfully deleted "${food.name}"`, 'Close', {
-        duration: 3000,
-        panelClass: ['success-snackbar'],
-      });
-    } catch (error) {
-      console.error('Error deleting food:', error);
-      this.snackBar.open(
-        `Failed to delete "${food.name}". Please try again.`,
-        'Close',
-        {
-          duration: 5000,
-          panelClass: ['error-snackbar'],
-        }
-      );
-    }
-  }
-
-  getServingSizeWithUnit(food: Food): string {
-    return `${food.servingSize} ${food.unit}`;
-  }
-
-  private checkScreenSize() {
-    this.isMobile = window.innerWidth < 768;
-  }
-
-  clearSearch() {
-    this.searchTerm = '';
-    this.performSearch();
   }
 }

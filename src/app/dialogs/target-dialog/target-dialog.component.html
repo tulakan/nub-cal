@@ -1,91 +1,156 @@
-<dialog-layout
-  [title]="'Daily Nutrition Goals'"
-  [showSaveButton]="true"
-  [showCancelButton]="true"
-  [showResetButton]="true"
-  [disableSaveButton]="targetForm.invalid"
-  (onSave)="onSave()"
-  (onCancel)="onCancel()"
-  (onReset)="onReset()"
-  (onCloseDialog)="onCloseDialog()"
->
-  <p class="dialog-subtitle">
-    Set your daily nutrition targets to help track your progress
-  </p>
+<app-sheet title="Settings">
+  <div class="cap-text">Daily targets</div>
+  <div class="grid">
+    <label class="nub-field">
+      <span>Calories (kcal)</span>
+      <input
+        class="nub-input num"
+        type="text"
+        inputmode="numeric"
+        [value]="kcal()"
+        (input)="set('kcal', $any($event.target).value)"
+      />
+    </label>
+    <label class="nub-field">
+      <span>Protein (g)</span>
+      <input
+        class="nub-input num"
+        type="text"
+        inputmode="decimal"
+        [value]="protein()"
+        (input)="set('protein', $any($event.target).value)"
+      />
+    </label>
+    <label class="nub-field">
+      <span>Carbs (g)</span>
+      <input
+        class="nub-input num"
+        type="text"
+        inputmode="decimal"
+        [value]="carb()"
+        (input)="set('carb', $any($event.target).value)"
+      />
+    </label>
+    <label class="nub-field">
+      <span>Fat (g)</span>
+      <input
+        class="nub-input num"
+        type="text"
+        inputmode="decimal"
+        [value]="fat()"
+        (input)="set('fat', $any($event.target).value)"
+      />
+    </label>
+  </div>
+  <div class="hint num">
+    P {{ split().p }}% · C {{ split().c }}% · F {{ split().f }}% · macros add up
+    to {{ fromMacros() }} kcal
+  </div>
+  @if (mismatch()) {
+    <button
+      type="button"
+      class="nub-btn text mismatch"
+      (click)="useMacroKcal()"
+    >
+      Calories don't match macros. Use {{ fromMacros() }} kcal
+    </button>
+  }
+  <button type="button" class="row" (click)="recalc()">
+    <mat-icon>calculate</mat-icon><span>Recalculate from my details</span
+    ><mat-icon class="chev">chevron_right</mat-icon>
+  </button>
 
-  <form [formGroup]="targetForm" class="target-form">
-    <div class="target-grid">
-      <div class="target-field">
-        <label class="field-label">Calories</label>
-        <mat-form-field appearance="outline" class="compact-field">
-          <input
-            matInput
-            type="number"
-            formControlName="kcal"
-            placeholder="kcal"
-          />
-          <mat-error *ngIf="targetForm.get('kcal')?.hasError('required')">
-            Calories is required
-          </mat-error>
-          <mat-error *ngIf="targetForm.get('kcal')?.hasError('min')">
-            Must be at least 1 kcal
-          </mat-error>
-        </mat-form-field>
-      </div>
+  <div class="cap-text section">Help</div>
+  <button type="button" class="row" (click)="guide()">
+    <mat-icon>menu_book</mat-icon><span>How to use Nub Cal</span
+    ><mat-icon class="chev">chevron_right</mat-icon>
+  </button>
 
-      <div class="target-field">
-        <label class="field-label">Protein</label>
-        <mat-form-field appearance="outline" class="compact-field">
-          <input
-            matInput
-            type="number"
-            formControlName="protein"
-            placeholder="grams"
-          />
-          <mat-error *ngIf="targetForm.get('protein')?.hasError('required')">
-            Protein is required
-          </mat-error>
-          <mat-error *ngIf="targetForm.get('protein')?.hasError('min')">
-            Must be at least 1 gram
-          </mat-error>
-        </mat-form-field>
-      </div>
-
-      <div class="target-field">
-        <label class="field-label">Carbs</label>
-        <mat-form-field appearance="outline" class="compact-field">
-          <input
-            matInput
-            type="number"
-            formControlName="carb"
-            placeholder="grams"
-          />
-          <mat-error *ngIf="targetForm.get('carb')?.hasError('required')">
-            Carbs is required
-          </mat-error>
-          <mat-error *ngIf="targetForm.get('carb')?.hasError('min')">
-            Must be at least 1 gram
-          </mat-error>
-        </mat-form-field>
-      </div>
-
-      <div class="target-field">
-        <label class="field-label">Fat</label>
-        <mat-form-field appearance="outline" class="compact-field">
-          <input
-            matInput
-            type="number"
-            formControlName="fat"
-            placeholder="grams"
-          />
-          <mat-error *ngIf="targetForm.get('fat')?.hasError('required')">
-            Fat is required
-          </mat-error>
-          <mat-error *ngIf="targetForm.get('fat')?.hasError('min')">
-            Must be at least 1 gram
-          </mat-error>
-        </mat-form-field>
-      </div>
+  <div class="cap-text section">Account</div>
+  @if (session.isGuest()) {
+    <div class="guest">
+      @if (profile.profile()?.demo) {
+        <div class="g-title">You're in demo mode</div>
+        <div class="g-sub">
+          Everything here is sample data. Create an account to keep it and start
+          tracking for real, or exit the demo below.
+        </div>
+      } @else {
+        <div class="g-title">You're using a guest account</div>
+        <div class="g-sub">
+          Create an account to keep your data and use it on other devices.
+        </div>
+      }
+      <input
+        class="nub-input"
+        type="email"
+        placeholder="Email"
+        autocomplete="username"
+        inputmode="email"
+        autocapitalize="off"
+        [value]="newEmail()"
+        (input)="newEmail.set($any($event.target).value)"
+      />
+      <input
+        class="nub-input"
+        type="password"
+        placeholder="Password (6+ characters)"
+        autocomplete="new-password"
+        [value]="newPassword()"
+        (input)="newPassword.set($any($event.target).value)"
+      />
+      @if (upgradeError()) {
+        <div class="nub-error" role="alert">{{ upgradeError() }}</div>
+      }
+      <button
+        type="button"
+        class="nub-btn"
+        [disabled]="upgrading() || !newEmail() || newPassword().length < 6"
+        (click)="upgrade()"
+      >
+        {{ upgrading() ? 'Creating…' : 'Create account' }}
+      </button>
     </div>
-  </form>
-</dialog-layout>
+  } @else {
+    <div class="line">{{ session.email() }}</div>
+  }
+  @if (profile.profile()?.demo) {
+    <button type="button" class="nub-btn text danger left" (click)="exitDemo()">
+      Exit demo
+    </button>
+  } @else {
+    <button type="button" class="nub-btn text danger left" (click)="logout()">
+      Log out
+    </button>
+  }
+
+  @if (legacy()) {
+    <div class="cap-text section">Data</div>
+    <button
+      type="button"
+      class="row"
+      [disabled]="importing()"
+      (click)="importLegacy()"
+    >
+      <mat-icon>download</mat-icon>
+      <span>{{
+        importing() ? 'Importing…' : 'Import data from previous version'
+      }}</span>
+      <mat-icon class="chev">chevron_right</mat-icon>
+    </button>
+  }
+
+  <div class="cap-text section">About</div>
+  <div class="line muted">Nub Cal v{{ version }}</div>
+
+  <div sheetFooter>
+    <button
+      type="button"
+      class="nub-btn"
+      [disabled]="!valid()"
+      (click)="save()"
+    >
+      Save targets
+    </button>
+  </div>
+</app-sheet>

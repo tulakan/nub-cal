@@ -1,238 +1,337 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { Component, OnDestroy, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { DialogLayoutComponent } from '../../shared/components/dialog-layout.component';
+import { MatIconModule } from '@angular/material/icon';
+import { ConfirmService } from '../../shared/components/confirm-dialog.component';
+import { MacroSummaryComponent } from '../../shared/components/macro-summary.component';
+import { QtyInputComponent } from '../../shared/components/qty-input.component';
+import { SheetService } from '../../shared/components/sheet.service';
+import { SwipeRowComponent } from '../../shared/components/swipe-row.component';
+import { SkeletonComponent } from '../../shared/components/primitives';
+import { UndoService } from '../../shared/components/undo.service';
+import { HasUnsavedChanges } from '../../shared/guards/unsaved-changes.guard';
 import { Food } from '../../shared/interface/food.interface';
 import { Menu, MenuIngredient } from '../../shared/interface/menu.interface';
-import { MaterialModule } from '../../shared/modules/material.module';
-import { FoodService } from '../../shared/services/food.service';
+import { KcalPipe, MacroPipe } from '../../shared/pipes/format.pipes';
 import { MenuService } from '../../shared/services/menu.service';
+import { ShellService } from '../../shared/services/shell.service';
+import { calcNutrition, ingredientsNutrition } from '../../shared/utils/nutrition';
+import { MenuPlanStore } from '../../stores/menu-plan.store';
+import { IngredientSheetComponent } from '../ingredient-sheet/ingredient-sheet.component';
 
 @Component({
   selector: 'app-create-menu',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule,
-    ReactiveFormsModule,
-    MaterialModule,
-    DialogLayoutComponent,
+    MatIconModule,
+    SwipeRowComponent,
+    QtyInputComponent,
+    MacroSummaryComponent,
+    SkeletonComponent,
+    KcalPipe,
+    MacroPipe,
   ],
-  templateUrl: './create-menu.component.html',
-  styleUrls: ['./create-menu.component.scss'],
-})
-export class CreateMenuComponent implements OnInit {
-  private foodService = inject(FoodService);
-  private menuService = inject(MenuService);
-  private snackBar = inject(MatSnackBar);
-  private router = inject(Router);
-  private route = inject(ActivatedRoute);
-  private dialogRef = inject(MatDialogRef<CreateMenuComponent>, {
-    optional: true,
-  });
-  public data = inject(MAT_DIALOG_DATA, { optional: true });
+  template: `
+    @if (!ready()) {
+      <app-skeleton [count]="4" />
+    } @else {
+      <div class="page">
+        <label class="nub-field">
+          <span>Menu name</span>
+          <input
+            class="nub-input"
+            type="text"
+            placeholder="e.g. Chicken rice bowl"
+            autocomplete="off"
+            enterkeyhint="done"
+            [value]="name()"
+            (input)="name.set($any($event.target).value)"
+          />
+        </label>
 
-  foods: Food[] = [];
-  newMenuName: string = '';
-  foodSearchTerm: any = '';
-  selectedFoodId: string | null = null;
-  selectedFood: Food | null = null;
-  ingredientQuantity: number = 0;
-  currentMenuIngredients: (MenuIngredient & { food?: Food })[] = [];
-  filteredFoods: Food[] = [];
-  isPageMode = false;
-  editMenuId: string | null = null;
+        <div class="sect-head">
+          <div class="sect-title">Ingredients · {{ ingredients().length }}</div>
+        </div>
+
+        <div class="ings">
+          @for (ing of ingredients(); track $index) {
+            @let f = foodOf(ing.foodId);
+            <app-swipe-row (delete)="remove($index)">
+              <div class="ing" [class.missing]="!f">
+                <div class="iname">
+                  {{ f ? f.name : 'Deleted food' }}
+                  @if (!f) {
+                    <button type="button" class="rm" (click)="remove($index)">Remove</button>
+                  }
+                </div>
+                @if (f) {
+                  <app-qty-input
+                    [compact]="true"
+                    [value]="ing.quantity"
+                    [unit]="f.unit"
+                    (valueChange)="setQty($index, $event)"
+                  />
+                  <div class="ikcal num">{{ kcalOf(ing) | kcal }}</div>
+                }
+              </div>
+            </app-swipe-row>
+          }
+          <button type="button" class="add" (click)="addIngredient()">
+            <mat-icon>add</mat-icon> Add ingredient
+          </button>
+        </div>
+
+        @if (editId) {
+          <div class="extra">
+            <button type="button" class="nub-btn text" (click)="duplicate()">Duplicate menu</button>
+            <button type="button" class="nub-btn text danger" (click)="deleteMenu()">
+              Delete menu
+            </button>
+          </div>
+        }
+      </div>
+
+      <div class="totals">
+        <app-macro-summary [consumed]="totals()" />
+        <div class="split num">P {{ split().p }}% · C {{ split().c }}% · F {{ split().f }}%</div>
+      </div>
+    }
+  `,
+  styles: `
+    .page {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+      padding: var(--space-sm) var(--space-xs) 120px;
+    }
+    .ings {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+    .ing {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      min-height: 52px;
+      padding: var(--space-xs) var(--space-md);
+      border: var(--border);
+      border-radius: var(--radius-md);
+    }
+    .iname {
+      flex: 1;
+      min-width: 0;
+      font-size: var(--fs-body);
+      font-weight: 500;
+    }
+    .ing.missing .iname {
+      font-style: italic;
+      font-weight: 400;
+      color: var(--c-gray-600);
+    }
+    .rm {
+      margin-left: var(--space-sm);
+      border: 0;
+      background: transparent;
+      color: var(--c-negative-text);
+      font: inherit;
+      min-height: 44px;
+    }
+    .ikcal {
+      width: 44px;
+      text-align: right;
+      font-size: var(--fs-body-sm);
+      color: var(--c-gray-600);
+    }
+    .add {
+      min-height: 48px;
+      border: 1px dashed var(--c-gray-400);
+      border-radius: var(--radius-md);
+      background: transparent;
+      font: inherit;
+      color: var(--c-gray-800);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-xs);
+      cursor: pointer;
+    }
+    .extra {
+      display: flex;
+      flex-direction: column;
+      margin-top: var(--space-lg);
+    }
+    .totals {
+      position: fixed;
+      left: var(--app-edge);
+      right: var(--app-edge);
+      bottom: 0;
+      z-index: 4;
+      padding: var(--space-md) var(--space-lg) calc(var(--space-md) + var(--safe-bottom));
+      background: var(--c-white);
+      border-top: var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-md);
+    }
+    .split {
+      font-size: var(--fs-body-sm);
+      color: var(--c-gray-600);
+      white-space: nowrap;
+    }
+  `,
+})
+export class CreateMenuComponent implements OnInit, OnDestroy, HasUnsavedChanges {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private sheets = inject(SheetService);
+  private undo = inject(UndoService);
+  private confirm = inject(ConfirmService);
+  private menuService = inject(MenuService);
+  private shell = inject(ShellService);
+  store = inject(MenuPlanStore);
+
+  editId = this.route.snapshot.paramMap.get('id');
+  name = signal('');
+  ingredients = signal<MenuIngredient[]>([]);
+  ready = signal(!this.route.snapshot.paramMap.get('id'));
+
+  private initial = '';
+  private saved = false;
+
+  totals = computed(() => ingredientsNutrition(this.ingredients(), this.store.foodsById()));
+  split = computed(() => {
+    const t = this.totals();
+    const total = t.protein * 4 + t.carb * 4 + t.fat * 9 || 1;
+    return {
+      p: Math.round((t.protein * 4 * 100) / total),
+      c: Math.round((t.carb * 4 * 100) / total),
+      f: Math.round((t.fat * 9 * 100) / total),
+    };
+  });
+  canSave = computed(() => this.name().trim().length > 0 && this.ingredients().length > 0);
+
+  constructor() {
+    effect(
+      () => {
+        if (!this.editId || this.ready() || !this.store.menusLoaded()) return;
+        const m = this.store.menusById().get(this.editId);
+        if (m) {
+          this.name.set(m.name);
+          this.ingredients.set(m.ingredients.map(i => ({ ...i })));
+          this.initial = this.snapshot();
+          this.ready.set(true);
+        } else {
+          this.undo.notify('Menu not found');
+          this.saved = true;
+          this.router.navigate(['/plan']);
+        }
+      },
+      { allowSignalWrites: true }
+    );
+  }
 
   ngOnInit() {
-    // Check if we're in page mode or dialog mode
-    this.isPageMode = !this.dialogRef;
-
-    // Get menu ID from route params if in edit mode
-    if (this.isPageMode) {
-      this.editMenuId = this.route.snapshot.paramMap.get('id');
-    }
-
-    this.loadFoods();
+    this.store.start();
+    this.initial = this.snapshot();
+    this.shell.set([
+      {
+        label: 'Save',
+        ariaLabel: 'Save menu',
+        onClick: () => this.save(),
+        disabled: computed(() => !this.canSave() || !this.ready()),
+      },
+    ]);
   }
 
-  displayFoodName = (value: any): string => {
-    if (!value) return '';
-    if (typeof value === 'string') return value;
-    return value.name || '';
-  };
-
-  trackByFoodId(index: number, food: Food): string {
-    return food.id;
+  ngOnDestroy() {
+    this.shell.clear();
   }
 
-  private menuLoaded = false;
-
-  loadFoods() {
-    this.foodService.getFoodListRealtime(foods => {
-      this.foods = foods;
-      this.filteredFoods = foods;
-
-      if (this.menuLoaded) return;
-      this.menuLoaded = true;
-
-      if (this.data && this.data.menu) {
-        const menu = this.data.menu;
-        this.newMenuName = menu.name;
-        this.currentMenuIngredients = menu.ingredients.map((ing: any) => {
-          const food = this.foods.find(f => f.id === ing.foodId);
-          return { ...ing, food };
-        });
-      } else if (this.isPageMode && this.editMenuId) {
-        this.loadMenuForEdit();
-      }
-    });
+  hasUnsavedChanges(): boolean {
+    return !this.saved && this.ready() && this.snapshot() !== this.initial;
   }
 
-  private async loadMenuForEdit() {
-    try {
-      const [menu, allFoods] = await Promise.all([
-        this.menuService.getMenuById(this.editMenuId!),
-        this.foodService.getFoodList(),
-      ]);
-      if (menu) {
-        this.newMenuName = menu.name;
-        this.currentMenuIngredients = menu.ingredients.map((ing: any) => {
-          const food = allFoods.find((f: any) => f.id === ing.foodId);
-          return { ...ing, food };
-        });
-      }
-    } catch (error) {
-      console.error('Error loading menu:', error);
-      this.snackBar.open('Failed to load menu', 'Close', { duration: 3000 });
-    }
+  private snapshot(): string {
+    return JSON.stringify([this.name().trim(), this.ingredients()]);
   }
 
-  onFoodSearchChange() {
-    if (typeof this.foodSearchTerm !== 'string') return;
-    const term = this.foodSearchTerm.toLowerCase();
-    this.filteredFoods = this.foods.filter(food =>
-      food.name.toLowerCase().includes(term)
-    );
-    if (this.selectedFood && this.foodSearchTerm !== this.selectedFood.name) {
-      this.selectedFoodId = null;
-      this.selectedFood = null;
-    }
+  foodOf(id: string): Food | undefined {
+    return this.store.foodsById().get(id);
   }
 
-  onFoodSelected(event: any) {
-    const food = event.option.value as Food;
-    this.selectedFoodId = food.id;
-    this.selectedFood = food;
-    this.foodSearchTerm = food.name;
-    this.filteredFoods = this.foods;
+  kcalOf(ing: MenuIngredient): number {
+    return calcNutrition(this.foodOf(ing.foodId), ing.quantity).kcal;
+  }
+
+  setQty(index: number, quantity: number) {
+    this.ingredients.update(l => l.map((i, idx) => (idx === index ? { ...i, quantity } : i)));
+  }
+
+  remove(index: number) {
+    this.ingredients.update(l => l.filter((_, i) => i !== index));
   }
 
   addIngredient() {
-    if (!this.selectedFood || this.ingredientQuantity <= 0) {
-      this.snackBar.open(
-        'Please select a food and enter a valid quantity',
-        'Close',
-        { duration: 3000 }
-      );
-      return;
-    }
-
-    this.currentMenuIngredients.push({
-      foodId: this.selectedFood.id,
-      quantity: this.ingredientQuantity,
-      food: this.selectedFood,
-    });
-
-    // Reset
-    this.selectedFood = null;
-    this.selectedFoodId = null;
-    this.foodSearchTerm = '';
-    this.ingredientQuantity = 0;
-    this.filteredFoods = this.foods;
-  }
-
-  removeIngredient(index: number) {
-    this.currentMenuIngredients.splice(index, 1);
-  }
-
-  calculateMenuMacros() {
-    let kcal = 0,
-      protein = 0,
-      carb = 0,
-      fat = 0;
-    this.currentMenuIngredients.forEach(item => {
-      if (item.food) {
-        const factor = item.quantity / item.food.servingSize;
-        kcal += item.food.kcal * factor;
-        protein += item.food.protein * factor;
-        carb += item.food.carb * factor;
-        fat += item.food.fat * factor;
-      }
-    });
-    return { kcal, protein, carb, fat };
-  }
-
-  async saveMenu() {
-    if (!this.newMenuName || this.currentMenuIngredients.length === 0) {
-      this.snackBar.open(
-        'Please enter a menu name and add at least one ingredient',
-        'Close',
-        { duration: 3000 }
-      );
-      return;
-    }
-
-    const menuData: Menu = {
-      name: this.newMenuName,
-      ingredients: this.currentMenuIngredients.map(item => ({
-        foodId: item.foodId,
-        quantity: item.quantity,
-      })),
-    };
-
-    try {
-      if (this.editMenuId || (this.data && this.data.menu)) {
-        const menuId = this.editMenuId || this.data.menu.id;
-        await this.menuService.updateMenu(menuId, menuData);
-        this.snackBar.open(
-          `Successfully updated "${this.newMenuName}"`,
-          'Close',
-          { duration: 3000 }
-        );
-      } else {
-        await this.menuService.addMenu(menuData);
-        this.snackBar.open(
-          `Successfully saved "${this.newMenuName}"`,
-          'Close',
-          { duration: 3000 }
-        );
-      }
-
-      if (this.isPageMode) {
-        this.goBack();
-      } else {
-        this.dialogRef?.close(true);
-      }
-    } catch (error) {
-      console.error('Error saving menu:', error);
-      this.snackBar.open('Failed to save menu. Please try again.', 'Close', {
-        duration: 3000,
+    this.sheets
+      .open<IngredientSheetComponent, MenuIngredient | undefined>(IngredientSheetComponent)
+      .afterDismissed()
+      .subscribe(result => {
+        if (!result) return;
+        const existing = this.ingredients().findIndex(i => i.foodId === result.foodId);
+        if (existing >= 0) {
+          const qty = this.ingredients()[existing].quantity + result.quantity;
+          this.setQty(existing, Math.round(qty * 100) / 100);
+          this.undo.notify(`Updated ${this.foodOf(result.foodId)?.name ?? 'ingredient'} to ${qty}`);
+        } else {
+          this.ingredients.update(l => [...l, result]);
+        }
       });
+  }
+
+  async save() {
+    if (!this.canSave()) return;
+    const data: Menu = {
+      name: this.name().trim(),
+      ingredients: this.ingredients(),
+    };
+    try {
+      if (this.editId) {
+        await this.menuService.updateMenu(this.editId, { ...data, updatedAt: Date.now() });
+      } else {
+        await this.menuService.addMenu(data);
+      }
+      this.saved = true;
+      this.undo.notify(`Saved "${data.name}"`);
+      this.router.navigate(['/plan']);
+    } catch (e) {
+      console.error('Error saving menu:', e);
+      this.undo.notify('Could not save. Please try again.');
     }
   }
 
-  onCancel() {
-    if (this.isPageMode) {
-      this.goBack();
-    } else {
-      this.dialogRef?.close();
-    }
+  async duplicate() {
+    if (!this.canSave()) return;
+    await this.menuService.addMenu({
+      name: `${this.name().trim()} (copy)`,
+      ingredients: this.ingredients(),
+    });
+    this.saved = true;
+    this.undo.notify('Menu duplicated');
+    this.router.navigate(['/plan']);
   }
 
-  goBack() {
-    this.router.navigate(['/menu-plan']);
+  async deleteMenu() {
+    if (!this.editId) return;
+    const ok = await this.confirm.ask({
+      title: `Delete "${this.name()}"?`,
+      message: 'This removes the saved menu. Past logs are not affected.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (!ok) return;
+    await this.menuService.deleteMenu(this.editId);
+    this.saved = true;
+    this.router.navigate(['/plan']);
   }
 }

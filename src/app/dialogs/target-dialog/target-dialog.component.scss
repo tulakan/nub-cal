@@ -1,88 +1,86 @@
-.target-dialog {
-  min-width: 400px;
-  max-width: 500px;
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+}
 
-  .dialog-subtitle {
-    color: var(--mdc-theme-on-surface, rgba(0, 0, 0, 0.6));
-    margin: 0 0 8px 0;
-    font-size: 12px;
-    line-height: 1.4;
+.hint {
+  font-size: var(--fs-body-sm);
+  color: var(--c-gray-600);
+  margin: var(--space-md) 0 var(--space-xs);
+}
+
+.mismatch {
+  color: var(--c-warning-text);
+  text-align: left;
+}
+
+.section {
+  margin-top: var(--space-lg);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-bottom: var(--border);
+  background: transparent;
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--c-black);
+  text-align: left;
+  cursor: pointer;
+
+  mat-icon {
+    color: var(--c-primary-ink);
   }
-
-  .target-form {
-    .target-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 4px;
-    }
-
-    .target-field {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-
-      .field-label {
-        font-weight: 500;
-        font-size: 14px;
-        color: var(--mdc-theme-on-surface, rgba(0, 0, 0, 0.87));
-        margin: 0;
-      }
-
-      .compact-field {
-        width: 100%;
-
-        .mat-mdc-form-field-subscript-wrapper {
-          margin-top: 4px;
-        }
-      }
-    }
+  span {
+    flex: 1;
+  }
+  .chev {
+    color: var(--c-gray-400);
+  }
+  &:disabled {
+    opacity: 0.4;
   }
 }
 
-// Dialog actions styling
-::ng-deep .target-dialog {
-  .mat-mdc-dialog-actions {
-    padding: 16px 24px 24px;
-    gap: 8px;
+.guest {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  margin: var(--space-sm) 0;
+  border-radius: var(--radius-lg);
+  background: var(--c-primary-bg);
+}
 
-    button {
-      min-width: auto;
-      &:first-child {
-        margin-right: auto;
-      }
-    }
+.g-title {
+  font-weight: 700;
+  color: var(--c-primary-ink);
+}
+
+.g-sub {
+  font-size: var(--fs-body-sm);
+  color: var(--c-primary-ink);
+  margin-bottom: var(--space-xs);
+}
+
+.line {
+  font-size: var(--fs-body);
+  color: var(--c-black);
+  padding: var(--space-sm) 0;
+
+  &.muted {
+    color: var(--c-gray-600);
   }
 }
 
-// Form field styling
-::ng-deep .target-dialog .compact-field {
-  .mat-mdc-form-field-infix {
-    min-height: 40px;
-  }
-
-  .mat-mdc-text-field-wrapper {
-    border-radius: 8px;
-  }
-
-  .mat-mdc-form-field-error {
-    font-size: 12px;
-    line-height: 1.2;
-  }
-}
-
-// Responsive adjustments
-@media (max-width: 480px) {
-  .target-dialog {
-    min-width: 280px;
-    max-width: 90vw;
-
-    .dialog-subtitle {
-      font-size: 16px;
-    }
-
-    .target-form .target-field .field-label {
-      font-size: 16px;
-    }
-  }
+.left {
+  justify-content: flex-start;
+  padding: 0;
 }

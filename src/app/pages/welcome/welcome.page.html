@@ -1,0 +1,400 @@
+<div class="page">
+  <div class="top">
+    <button type="button" class="icon-btn" aria-label="Back" (click)="back()">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div class="dots" aria-hidden="true">
+      @for (s of steps; track s) {
+        <span class="dot" [class.on]="$index <= index()"></span>
+      }
+    </div>
+    <span class="icon-btn"></span>
+  </div>
+
+  <div class="body">
+    @switch (step()) {
+      @case ('hello') {
+        <div class="hero">
+          <div class="logo"><mat-icon>eco</mat-icon></div>
+          <div class="h1">Welcome to Nub Cal</div>
+          <div class="lead">A calm, simple way to eat with intention.</div>
+        </div>
+        <div class="points">
+          <div class="pt">
+            <mat-icon class="t-primary">bolt</mat-icon>Log a meal in about 3
+            taps
+          </div>
+          <div class="pt">
+            <mat-icon class="t-carb">restaurant_menu</mat-icon>Save menus you
+            eat often
+          </div>
+          <div class="pt">
+            <mat-icon class="t-fat">show_chart</mat-icon>See your weight and
+            body trends
+          </div>
+        </div>
+        <div class="note">
+          We'll set your daily targets next. It takes about a minute.
+        </div>
+      }
+
+      @case ('body') {
+        @if (mode === 'setup' && index() === 0) {
+          <div class="who">
+            {{
+              session.isGuest()
+                ? 'Guest session'
+                : 'Signed in as ' + session.email()
+            }}
+            ·
+            <button type="button" class="link" (click)="logout()">
+              Use a different account
+            </button>
+          </div>
+        }
+        <div class="h2">About you</div>
+        <div class="sub">Used only to estimate your daily calories.</div>
+
+        <div class="cap-text">Goal</div>
+        <app-segmented
+          [options]="goals"
+          [value]="goal()"
+          (valueChange)="goal.set($any($event))"
+        />
+
+        <div class="cap-text">Gender</div>
+        <app-segmented
+          [options]="genders"
+          [value]="gender()"
+          (valueChange)="gender.set($any($event))"
+        />
+
+        <div class="grid3">
+          <label class="nub-field">
+            <span>Age</span>
+            <input
+              class="nub-input num"
+              type="text"
+              inputmode="numeric"
+              [value]="age() ?? ''"
+              (input)="num(age, $any($event.target).value)"
+            />
+          </label>
+          <label class="nub-field">
+            <span>Height (cm)</span>
+            <input
+              class="nub-input num"
+              type="text"
+              inputmode="decimal"
+              [value]="height() ?? ''"
+              (input)="num(height, $any($event.target).value)"
+            />
+          </label>
+          <label class="nub-field">
+            <span>Weight (kg)</span>
+            <input
+              class="nub-input num"
+              type="text"
+              inputmode="decimal"
+              [value]="weight() ?? ''"
+              (input)="num(weight, $any($event.target).value)"
+            />
+          </label>
+        </div>
+
+        <div class="cap-text">Activity</div>
+        <div class="acts" role="radiogroup">
+          @for (a of activities; track a.value) {
+            <button
+              type="button"
+              class="act"
+              role="radio"
+              [attr.aria-checked]="activity() === a.value"
+              [class.on]="activity() === a.value"
+              (click)="activity.set(a.value)"
+            >
+              <span class="act-t">{{ a.label }}</span>
+              <span class="act-h">{{ a.hint }}</span>
+            </button>
+          }
+        </div>
+      }
+
+      @case ('targets') {
+        <div class="h2">Your daily targets</div>
+        <div class="card">
+          <div class="big num">{{ targets().kcal | kcal }}</div>
+          <div class="cap">kcal per day</div>
+          <app-macro-chips
+            class="chips"
+            [protein]="targets().protein"
+            [carb]="targets().carb"
+            [fat]="targets().fat"
+          />
+          <div class="units">grams of protein, carbs and fat</div>
+        </div>
+        @if (result(); as r) {
+          <div class="explain num">
+            Your body burns about <b>{{ r.bmr | kcal }}</b> kcal at rest and
+            <b>{{ r.tdee | kcal }}</b> kcal on a normal day.
+            @if (r.adjustment < 0) {
+              Eating <b>{{ -r.adjustment | kcal }}</b> kcal less than that loses
+              about <b>{{ weeklyKg() }} kg</b> a week, a steady pace that
+              protects muscle.
+            } @else if (r.adjustment > 0) {
+              A small surplus of <b>{{ r.adjustment | kcal }}</b> kcal supports
+              muscle gain with minimal fat.
+            }
+            Protein is set high to keep you full and protect muscle.
+          </div>
+        } @else {
+          <div class="explain">
+            These are general defaults. Add your details for a personal
+            estimate.
+          </div>
+        }
+        <div class="note">
+          Estimates only. You can change them anytime in Settings.
+        </div>
+      }
+
+      @case ('guide') {
+        <div class="h2">How it works</div>
+        <app-guide />
+      }
+
+      @case ('account') {
+        <div class="h2">Save your setup</div>
+        <div class="sub">
+          Create an account so your log and progress are kept and synced.
+        </div>
+        <label class="nub-field">
+          <span>Email</span>
+          <input
+            class="nub-input"
+            type="email"
+            inputmode="email"
+            autocomplete="username"
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            enterkeyhint="next"
+            [value]="email()"
+            (input)="email.set($any($event.target).value)"
+          />
+        </label>
+        <label class="nub-field">
+          <span>Password (6+ characters)</span>
+          <div class="pw">
+            <input
+              class="nub-input"
+              [type]="showPw() ? 'text' : 'password'"
+              autocomplete="new-password"
+              enterkeyhint="go"
+              [value]="password()"
+              (input)="password.set($any($event.target).value)"
+              (keydown.enter)="signUp()"
+            />
+            <button
+              type="button"
+              class="eye"
+              [attr.aria-label]="showPw() ? 'Hide password' : 'Show password'"
+              (click)="showPw.set(!showPw())"
+            >
+              <mat-icon>{{
+                showPw() ? 'visibility_off' : 'visibility'
+              }}</mat-icon>
+            </button>
+          </div>
+        </label>
+        @if (accountError()) {
+          <div class="nub-error" role="alert">
+            {{ accountError() }}
+            @if (emailTaken()) {
+              <button type="button" class="link" (click)="goLogin()">
+                Log in
+              </button>
+            }
+          </div>
+        }
+        <label class="opt">
+          <input
+            type="checkbox"
+            [checked]="useStarter()"
+            (change)="useStarter.set($any($event.target).checked)"
+          />
+          <span
+            ><b>Add starter foods and sample menus</b><br />24 common foods
+            (incl. Thai dishes) and 3 menus to try</span
+          >
+        </label>
+      }
+
+      @case ('start') {
+        <div class="h2">Ready to start</div>
+        @if (legacy()) {
+          <label class="opt">
+            <input
+              type="checkbox"
+              [checked]="useLegacy()"
+              (change)="useLegacy.set($any($event.target).checked)"
+            />
+            <span
+              ><b>Import my data from the previous version</b><br />Foods, menus
+              and progress entries</span
+            >
+          </label>
+        }
+        <label class="opt">
+          <input
+            type="checkbox"
+            [checked]="useStarter()"
+            (change)="useStarter.set($any($event.target).checked)"
+          />
+          <span
+            ><b>Add starter foods and sample menus</b><br />24 common foods
+            (incl. Thai dishes) and 3 menus to try</span
+          >
+        </label>
+        @if (session.isGuest()) {
+          <div class="note">
+            You're using a guest account. Create an account in Settings anytime
+            to keep your data.
+          </div>
+        }
+      }
+    }
+  </div>
+
+  <div class="foot">
+    @switch (step()) {
+      @case ('body') {
+        <button
+          type="button"
+          class="nub-btn"
+          [disabled]="!bodyValid()"
+          (click)="continueBody()"
+        >
+          Calculate my targets
+        </button>
+        <button type="button" class="nub-btn text" (click)="skipBody()">
+          Skip, use defaults
+        </button>
+      }
+      @case ('targets') {
+        <button
+          type="button"
+          class="nub-btn"
+          [disabled]="!!busy()"
+          (click)="next()"
+        >
+          {{ mode === 'targets' ? 'Save targets' : 'Looks good' }}
+        </button>
+      }
+      @case ('account') {
+        <div class="h2">Save your setup</div>
+        <div class="sub">
+          Create an account so your log and progress are kept and synced.
+        </div>
+        <label class="nub-field">
+          <span>Email</span>
+          <input
+            class="nub-input"
+            type="email"
+            inputmode="email"
+            autocomplete="username"
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            enterkeyhint="next"
+            [value]="email()"
+            (input)="email.set($any($event.target).value)"
+          />
+        </label>
+        <label class="nub-field">
+          <span>Password (6+ characters)</span>
+          <div class="pw">
+            <input
+              class="nub-input"
+              [type]="showPw() ? 'text' : 'password'"
+              autocomplete="new-password"
+              enterkeyhint="go"
+              [value]="password()"
+              (input)="password.set($any($event.target).value)"
+              (keydown.enter)="signUp()"
+            />
+            <button
+              type="button"
+              class="eye"
+              [attr.aria-label]="showPw() ? 'Hide password' : 'Show password'"
+              (click)="showPw.set(!showPw())"
+            >
+              <mat-icon>{{
+                showPw() ? 'visibility_off' : 'visibility'
+              }}</mat-icon>
+            </button>
+          </div>
+        </label>
+        @if (accountError()) {
+          <div class="nub-error" role="alert">
+            {{ accountError() }}
+            @if (emailTaken()) {
+              <button type="button" class="link" (click)="goLogin()">
+                Log in
+              </button>
+            }
+          </div>
+        }
+        <label class="opt">
+          <input
+            type="checkbox"
+            [checked]="useStarter()"
+            (change)="useStarter.set($any($event.target).checked)"
+          />
+          <span
+            ><b>Add starter foods and sample menus</b><br />24 common foods
+            (incl. Thai dishes) and 3 menus to try</span
+          >
+        </label>
+      }
+
+      @case ('account') {
+        <button
+          type="button"
+          class="nub-btn"
+          [disabled]="!!busy() || !email() || password().length < 6"
+          (click)="signUp()"
+        >
+          {{
+            busy() === 'signup' || busy() === 'finish'
+              ? 'Setting up…'
+              : 'Create account & start'
+          }}
+        </button>
+        <button
+          type="button"
+          class="nub-btn text"
+          [disabled]="!!busy()"
+          (click)="continueAsGuest()"
+        >
+          {{ busy() === 'guest' ? 'Starting…' : 'Continue without an account' }}
+        </button>
+      }
+      @case ('start') {
+        <button
+          type="button"
+          class="nub-btn"
+          [disabled]="!!busy()"
+          (click)="finish()"
+        >
+          {{ busy() ? 'Setting up…' : 'Start tracking' }}
+        </button>
+      }
+      @default {
+        <button type="button" class="nub-btn" (click)="next()">
+          {{ step() === 'hello' ? 'Get started' : 'Next' }}
+        </button>
+      }
+    }
+  </div>
+</div>

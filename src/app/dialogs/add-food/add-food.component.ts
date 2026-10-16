@@ -1,185 +1,159 @@
-import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { MatBottomSheetRef } from '@angular/material/bottom-sheet';
+import { FoodLogStore } from '../../stores/food-log.store';
+import { MenuPlanStore } from '../../stores/menu-plan.store';
+import { FoodPickerComponent } from '../../shared/components/food-picker.component';
+import { MacroSummaryComponent } from '../../shared/components/macro-summary.component';
+import { MenuPickerComponent } from '../../shared/components/menu-picker.component';
+import { QtyInputComponent } from '../../shared/components/qty-input.component';
+import { SheetComponent } from '../../shared/components/sheet.component';
 import {
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { Observable, map, startWith } from 'rxjs';
-import { DialogLayoutComponent } from '../../shared/components/dialog-layout.component';
+  ChipsComponent,
+  SegmentedComponent,
+} from '../../shared/components/primitives';
+import { UndoService } from '../../shared/components/undo.service';
 import { Food } from '../../shared/interface/food.interface';
-import { TargetMacros } from '../../shared/interface/nutrition.interface';
-import { MaterialModule } from '../../shared/modules/material.module';
-import { FoodService } from '../../shared/services/food.service';
+import { Menu } from '../../shared/interface/menu.interface';
+import { KcalPipe, MacroPipe } from '../../shared/pipes/format.pipes';
+import {
+  calcNutrition,
+  ingredientsNutrition,
+} from '../../shared/utils/nutrition';
+
+type Step = 'pick' | 'qty' | 'menu';
 
 @Component({
   selector: 'app-add-food',
   standalone: true,
   imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MaterialModule,
-    DialogLayoutComponent,
+    SheetComponent,
+    SegmentedComponent,
+    ChipsComponent,
+    FoodPickerComponent,
+    MenuPickerComponent,
+    QtyInputComponent,
+    MacroSummaryComponent,
+    KcalPipe,
+    MacroPipe,
   ],
   templateUrl: './add-food.component.html',
   styleUrls: ['./add-food.component.scss'],
 })
-export class AddFoodComponent implements OnInit {
-  private fb = inject(FormBuilder);
-  private foodService = inject(FoodService);
-  private dialogRef = inject(MatDialogRef<AddFoodComponent>);
-  private data = inject(MAT_DIALOG_DATA);
+export class AddFoodComponent {
+  private ref = inject(MatBottomSheetRef<AddFoodComponent>);
+  private undo = inject(UndoService);
+  log = inject(FoodLogStore);
+  store = inject(MenuPlanStore);
 
-  foodSearchForm!: FormGroup;
-  filteredOptions!: Observable<Food[]>;
+  tabs = [
+    { value: 'foods', label: 'Foods' },
+    { value: 'menus', label: 'Menus' },
+  ];
+  scaleOptions = ['0.5', '1', '1.5', '2'].map(v => ({
+    value: v,
+    label: v === '0.5' ? '½×' : v === '1.5' ? '1½×' : `${v}×`,
+  }));
 
-  // Current targets and consumed amounts
-  currentTargets: TargetMacros = this.data?.currentTargets || {
-    kcal: 2000,
-    protein: 150,
-    carb: 250,
-    fat: 67,
-  };
-  currentConsumed = this.data?.currentConsumed || {
-    kcal: 0,
-    protein: 0,
-    carb: 0,
-    fat: 0,
-  };
+  step = signal<Step>('pick');
+  tab = signal('foods');
+  food = signal<Food | null>(null);
+  qty = signal(0);
 
-  // Make Math available in template
-  Math = Math;
+  menu = signal<Menu | null>(null);
+  menuScale = signal(1);
+  menuQty = signal<{ foodId: string; quantity: number }[]>([]);
 
-  ngOnInit() {
-    this.initForm();
-    this.setupAutocomplete();
-  }
+  recent = this.log.recentFoods(8);
 
-  private initForm() {
-    this.foodSearchForm = this.fb.group({
-      selectedFood: [null, Validators.required],
-      servingSize: [1, [Validators.required, Validators.min(0.1)]],
+  title = computed(() => {
+    if (this.step() === 'qty') return this.food()?.name ?? 'Add food';
+    if (this.step() === 'menu') return this.menu()?.name ?? 'Add menu';
+    return 'Add to today';
+  });
+
+  nutrition = computed(() => calcNutrition(this.food(), this.qty()));
+  menuNutrition = computed(() =>
+    ingredientsNutrition(this.menuQty(), this.store.foodsById())
+  );
+
+  quickChips = computed(() => {
+    const f = this.food();
+    if (!f) return [];
+    return [0.5, 1, 1.5, 2].map(m => {
+      const v = Math.round(f.servingSize * m * 100) / 100;
+      return { value: String(v), label: `${v}` };
     });
+  });
+
+  constructor() {
+    this.store.start();
   }
 
-  private setupAutocomplete() {
-    // Load foods first
-    this.loadFoods();
-
-    this.filteredOptions = this.foodSearchForm
-      .get('selectedFood')!
-      .valueChanges.pipe(
-        startWith(''),
-        map(value => {
-          if (typeof value === 'string') {
-            return this.filterFoods(value);
-          }
-          return this.allFoods;
-        })
-      );
+  selectFood(f: Food) {
+    this.food.set(f);
+    this.qty.set(f.servingSize);
+    this.step.set('qty');
   }
 
-  allFoods: Food[] = [];
-
-  private async loadFoods() {
-    try {
-      this.allFoods = (await this.foodService.getFoodList()) as Food[];
-    } catch (error) {
-      console.error('Error loading foods:', error);
-    }
+  selectMenu(m: Menu) {
+    this.menu.set(m);
+    this.menuScale.set(1);
+    this.menuQty.set(m.ingredients.map(i => ({ ...i })));
+    this.step.set('menu');
   }
 
-  private filterFoods(searchTerm: string): Food[] {
-    if (!searchTerm.trim()) {
-      return this.allFoods;
-    }
-    return this.allFoods.filter(food =>
-      food.name.toLowerCase().includes(searchTerm.toLowerCase())
+  setMenuScale(v: string) {
+    const scale = Number(v);
+    const m = this.menu();
+    if (!m) return;
+    this.menuScale.set(scale);
+    this.menuQty.set(
+      m.ingredients.map(i => ({
+        foodId: i.foodId,
+        quantity: Math.round(i.quantity * scale * 100) / 100,
+      }))
     );
   }
 
-  displayFoodName(food: Food): string {
-    return food?.name || '';
+  setIngredientQty(index: number, quantity: number) {
+    this.menuQty.update(list =>
+      list.map((i, idx) => (idx === index ? { ...i, quantity } : i))
+    );
   }
 
-  get selectedFood(): Food | null {
-    return this.foodSearchForm.get('selectedFood')?.value;
+  foodOf(foodId: string): Food | undefined {
+    return this.store.foodsById().get(foodId);
   }
 
-  get servingSize(): number {
-    return this.foodSearchForm.get('servingSize')?.value || 0;
+  back() {
+    this.step.set('pick');
   }
 
-  get calculatedNutrition() {
-    if (!this.selectedFood || this.servingSize <= 0) {
-      return { kcal: 0, protein: 0, carb: 0, fat: 0 };
+  addFood() {
+    const f = this.food();
+    if (!f || !(this.qty() > 0)) return;
+    const id = this.log.addFood(f, this.qty());
+    this.undo.undoable(`Added ${f.name}`, () => {
+      this.log.remove([id]);
+    });
+    this.ref.dismiss();
+  }
+
+  addMenu() {
+    const m = this.menu();
+    if (!m?.id) return;
+    const { ids, skipped } = this.log.logMenu(
+      { menuId: m.id, name: m.name, ingredients: this.menuQty() },
+      this.store.foodsById()
+    );
+    if (!ids.length) {
+      this.undo.notify('Nothing logged: foods in this menu were deleted');
+    } else {
+      const note = skipped ? ` (${skipped} skipped, food deleted)` : '';
+      this.undo.undoable(`Logged ${m.name}${note}`, () => {
+        this.log.remove(ids);
+      });
     }
-
-    const ratio = this.servingSize / this.selectedFood.servingSize;
-    return {
-      kcal: Math.round(this.selectedFood.kcal * ratio * 10) / 10,
-      protein: Math.round(this.selectedFood.protein * ratio * 10) / 10,
-      carb: Math.round(this.selectedFood.carb * ratio * 10) / 10,
-      fat: Math.round(this.selectedFood.fat * ratio * 10) / 10,
-    };
-  }
-
-  get showPreview(): boolean {
-    return !!(this.selectedFood && this.servingSize > 0);
-  }
-
-  get remainingAfterAdding() {
-    if (!this.showPreview) {
-      return {
-        kcal: this.currentTargets.kcal - this.currentConsumed.kcal,
-        protein: this.currentTargets.protein - this.currentConsumed.protein,
-        carb: this.currentTargets.carb - this.currentConsumed.carb,
-        fat: this.currentTargets.fat - this.currentConsumed.fat,
-      };
-    }
-
-    const foodNutrition = this.calculatedNutrition;
-    return {
-      kcal:
-        this.currentTargets.kcal -
-        this.currentConsumed.kcal -
-        foodNutrition.kcal,
-      protein:
-        this.currentTargets.protein -
-        this.currentConsumed.protein -
-        foodNutrition.protein,
-      carb:
-        this.currentTargets.carb -
-        this.currentConsumed.carb -
-        foodNutrition.carb,
-      fat:
-        this.currentTargets.fat - this.currentConsumed.fat - foodNutrition.fat,
-    };
-  }
-
-  onCancel() {
-    this.dialogRef.close();
-  }
-
-  onAddFood() {
-    if (this.foodSearchForm.valid && this.selectedFood) {
-      const result = {
-        food: this.selectedFood,
-        servingSize: this.servingSize,
-        calculatedNutrition: this.calculatedNutrition,
-      };
-      this.dialogRef.close(result);
-    }
-  }
-
-  // Dialog layout event handlers
-  onSave() {
-    this.onAddFood();
-  }
-
-  onCloseDialog() {
-    this.dialogRef.close();
+    this.ref.dismiss();
   }
 }
