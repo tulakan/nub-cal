@@ -1,7 +1,12 @@
 import { Injectable } from '@angular/core';
 import { initializeApp } from 'firebase/app';
 import { Auth, getAuth } from 'firebase/auth';
-import { Firestore, getFirestore } from 'firebase/firestore';
+import {
+  Firestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore';
 import { FirebaseConfig } from '../../../environments/firebase.config';
 
 @Injectable({
@@ -9,10 +14,11 @@ import { FirebaseConfig } from '../../../environments/firebase.config';
 })
 export class FirebaseService {
   private app = initializeApp(FirebaseConfig);
-  public db: Firestore = getFirestore(this.app);
+  /** Offline cache so foods/menus/logs work without a connection (PWA). */
+  public db: Firestore = initializeFirestore(this.app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  });
   public auth: Auth = getAuth(this.app);
-
-  constructor() {
-    // console.log('Firebase initialized', this.app);
-  }
 }

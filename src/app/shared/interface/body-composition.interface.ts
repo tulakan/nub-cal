@@ -7,7 +7,7 @@ export interface BodyComposition {
   muscleMass: number;
   visceralFat: number;
   note?: string;
-  userId?: string;
+
 }
 
 export interface Circumference {
@@ -23,5 +23,5 @@ export interface Circumference {
   leftCalf: number;
   rightCalf: number;
   note?: string;
-  userId?: string;
+
 }

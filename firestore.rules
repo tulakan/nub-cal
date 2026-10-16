@@ -1,9 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read/write access to authenticated users
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // Each account can only read and write its own data: users/{uid}/...
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      match /{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
     }
+
+    // Everything else, including the pre-account shared collections
+    // (foods, menu, body_composition, circumference), is closed.
+    // Import that data in the app (Settings → Import) BEFORE deploying these rules.
   }
 }

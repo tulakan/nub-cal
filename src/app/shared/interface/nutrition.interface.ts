@@ -8,6 +8,9 @@ export interface TargetMacros {
 }
 
 export interface LoggedFood {
+  /** Stable id for undo/edit. Legacy entries get one on load. */
+  id?: string;
+  /** Snapshot of the food at log time. */
   food: Food;
   servingSize: number;
   calculatedNutrition: {
@@ -16,4 +19,7 @@ export interface LoggedFood {
     carb: number;
     fat: number;
   };
+  /** Set when logged from a menu. */
+  group?: { id: string; menuId: string; name: string };
+  loggedAt?: number;
 }

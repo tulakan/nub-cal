@@ -1,39 +1,52 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router, UrlSegment } from '@angular/router';
-import { onAuthStateChanged } from 'firebase/auth';
-import { Observable } from 'rxjs';
-import { take } from 'rxjs/operators';
-import { StoreService } from '../../stores/store.service';
-import { FirebaseService } from '../services/firebase.service';
+import { CanActivateFn, Router } from '@angular/router';
+import { ProfileStore } from '../../stores/profile.store';
+import { SessionService } from '../services/session.service';
 
-export const authGuard: CanActivateFn = (route, state): Observable<boolean> => {
+/**
+ * App pages: signed-in users who finished setup.
+ * Everyone else lands on /login (which offers "Get started" / "Continue setup").
+ */
+export const authGuard: CanActivateFn = async (_route, state) => {
   const router = inject(Router);
-  const firebaseService = inject(FirebaseService);
-  const store = inject(StoreService);
+  const session = inject(SessionService);
+  const profile = inject(ProfileStore);
 
-  /* set current url for display active menu item */
-  const url: UrlSegment[] = route.url;
-  const path = url[0]?.path ?? '';
-
-  // Create an observable that checks Firebase auth state
-  return new Observable<boolean>(observer => {
-    const unsubscribe = onAuthStateChanged(firebaseService.auth, user => {
-      if (user) {
-        // User is authenticated
-        observer.next(true);
-      } else {
-        // User is not authenticated, redirect to login
-        router.navigate(['/login'], {
-          queryParams: { returnUrl: state.url },
-        });
-        observer.next(false);
-      }
-      observer.complete();
+  await session.ready;
+  if (!session.user()) {
+    const returnUrl =
+      state.url && state.url !== '/' && state.url !== '/today'
+        ? state.url
+        : null;
+    return router.createUrlTree(['/login'], {
+      queryParams: returnUrl ? { returnUrl } : {},
     });
+  }
+  const p = await profile.whenLoaded();
+  if (p && !p.onboarded) return router.createUrlTree(['/login']);
+  return true;
+};
 
-    // Return cleanup function
-    return () => unsubscribe();
-  }).pipe(
-    take(1) // Only take the first emission
-  );
+/** /login: skip straight to the app when already signed in and set up. */
+export const loginPageGuard: CanActivateFn = async () => {
+  const session = inject(SessionService);
+  const profile = inject(ProfileStore);
+  await session.ready;
+  if (!session.user()) return true;
+  const p = await profile.whenLoaded();
+  return p?.onboarded ? inject(Router).createUrlTree(['/today']) : true;
+};
+
+/** /welcome: new visitors, signed-in users who haven't finished setup, or ?mode=targets. */
+export const welcomeGuard: CanActivateFn = async route => {
+  const router = inject(Router);
+  const session = inject(SessionService);
+  const profile = inject(ProfileStore);
+  await session.ready;
+  const targetsMode = route.queryParamMap.get('mode') === 'targets';
+  if (!session.user())
+    return targetsMode ? router.createUrlTree(['/login']) : true;
+  if (targetsMode) return true;
+  const p = await profile.whenLoaded();
+  return p?.onboarded ? router.createUrlTree(['/today']) : true;
 };

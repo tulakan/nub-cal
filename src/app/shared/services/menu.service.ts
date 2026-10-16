@@ -1,72 +1,43 @@
 import { Injectable, inject } from '@angular/core';
 import {
-  collection,
+  Unsubscribe,
+  addDoc,
   deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
   onSnapshot,
   setDoc,
 } from 'firebase/firestore';
 import { Menu } from '../interface/menu.interface';
-import { FirebaseService } from './firebase.service';
+import { UserDataService } from './user-data.service';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class MenuService {
-  private firebaseService = inject(FirebaseService);
+  private data = inject(UserDataService);
 
-  async getMenuList(): Promise<Menu[]> {
-    const querySnapshot = await getDocs(
-      collection(this.firebaseService.db, 'menu')
+  listen(
+    onData: (menus: Menu[]) => void,
+    onError?: (e: unknown) => void
+  ): Unsubscribe {
+    return onSnapshot(
+      this.data.col('menus'),
+      snap => onData(snap.docs.map(d => ({ ...(d.data() as Menu), id: d.id }))),
+      e => {
+        console.error('menus listener', e);
+        onError?.(e);
+      }
     );
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Menu[];
   }
 
-  async getMenuById(id: string): Promise<Menu | null> {
-    const docRef = doc(this.firebaseService.db, 'menu', id);
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() } as Menu;
-    } else {
-      return null;
-    }
+  addMenu(menu: Menu) {
+    const { id: _id, ...rest } = menu;
+    return addDoc(this.data.col('menus'), { ...rest, updatedAt: Date.now() });
   }
 
-  addMenu(menuData: Menu) {
-    const docRef = doc(collection(this.firebaseService.db, 'menu'));
-    return setDoc(docRef, menuData);
-  }
-
-  updateMenu(id: string, menuData: Partial<Menu>) {
-    const docRef = doc(this.firebaseService.db, 'menu', id);
-    return setDoc(docRef, menuData, { merge: true });
+  updateMenu(id: string, menu: Partial<Menu>) {
+    const { id: _id, ...rest } = menu;
+    return setDoc(this.data.docRef('menus', id), rest, { merge: true });
   }
 
   deleteMenu(id: string) {
-    const docRef = doc(this.firebaseService.db, 'menu', id);
-    return deleteDoc(docRef);
-  }
-
-  getMenuListRealtime(callback: (menus: Menu[]) => void) {
-    const unsubscribe = onSnapshot(
-      collection(this.firebaseService.db, 'menu'),
-      querySnapshot => {
-        const menus = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Menu[];
-        callback(menus);
-      },
-      error => {
-        console.error('Error getting real-time updates for menu:', error);
-      }
-    );
-    return unsubscribe;
+    return deleteDoc(this.data.docRef('menus', id));
   }
 }
