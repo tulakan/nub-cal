@@ -1,0 +1,1 @@
+import{da as o,lb as i}from"./chunk-7E7BTUYT.js";var n=(()=>{class t{constructor(){this.actions=i([]),this.subtitle=i("")}set(e,s=""){this.actions.set(e),this.subtitle.set(s)}clear(){this.actions.set([]),this.subtitle.set("")}static{this.\u0275fac=function(s){return new(s||t)}}static{this.\u0275prov=o({token:t,factory:t.\u0275fac,providedIn:"root"})}}return t})();export{n as a};
