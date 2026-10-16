@@ -1,0 +1,104 @@
+<div class="page">
+  <div class="brand">
+    <div class="logo" aria-hidden="true"><mat-icon>eco</mat-icon></div>
+    <div class="name">Nub Cal</div>
+    <div class="tag">Count calories, plan meals and track progress.</div>
+  </div>
+
+  <!-- The demo signs in as a guest before seeding; keep the form up until it navigates. -->
+  @if (loading() !== 'demo' && session.user(); as u) {
+    <!-- Signed in but setup not finished (e.g. account from the previous version) -->
+    <div class="resume">
+      <div class="r-title">
+        {{ u.isAnonymous ? 'Guest session' : 'Signed in as ' + u.email }}
+      </div>
+      <div class="r-sub">Finish setting up your profile to start tracking.</div>
+      <button type="button" class="nub-btn" (click)="continueSetup()">
+        Continue setup
+      </button>
+      <button type="button" class="nub-btn text" (click)="logout()">
+        Use a different account
+      </button>
+    </div>
+  } @else {
+    <form class="form" (ngSubmit)="submit()">
+      <label class="nub-field">
+        <span>Email</span>
+        <input
+          class="nub-input"
+          type="email"
+          name="email"
+          inputmode="email"
+          autocomplete="username"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          enterkeyhint="next"
+          required
+          [(ngModel)]="email"
+        />
+      </label>
+
+      <div class="nub-field">
+        <div class="field-head">
+          <label for="login-password">Password</label>
+          <button
+            type="button"
+            class="forgot"
+            [disabled]="!!loading()"
+            (click)="forgot()"
+          >
+            {{ loading() === 'reset' ? 'Sending…' : 'Forgot password?' }}
+          </button>
+        </div>
+        <div class="pw">
+          <input
+            id="login-password"
+            class="nub-input"
+            [type]="show() ? 'text' : 'password'"
+            name="password"
+            autocomplete="current-password"
+            enterkeyhint="go"
+            required
+            [(ngModel)]="password"
+          />
+          <button
+            type="button"
+            class="eye"
+            [attr.aria-label]="show() ? 'Hide password' : 'Show password'"
+            (click)="show.set(!show())"
+          >
+            <mat-icon>{{ show() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      @if (error()) {
+        <div class="nub-error" role="alert">{{ error() }}</div>
+      }
+
+      <button
+        type="submit"
+        class="nub-btn submit"
+        [disabled]="!!loading()"
+      >
+        {{ loading() === 'login' ? 'Logging in…' : 'Log in' }}
+      </button>
+    </form>
+
+    <div class="new">
+      <div class="rule"><span>New to Nub Cal?</span></div>
+      <button type="button" class="nub-btn soft" (click)="getStarted()">
+        Get started
+      </button>
+      <button
+        type="button"
+        class="demo"
+        [disabled]="!!loading()"
+        (click)="tryDemo()"
+      >
+        {{ loading() === 'demo' ? 'Loading demo…' : 'Just looking? Try the demo' }}
+      </button>
+    </div>
+  }
+</div>

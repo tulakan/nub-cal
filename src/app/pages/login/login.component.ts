@@ -1,109 +1,119 @@
-import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { MaterialModule } from '../../shared/modules/material.module';
-import { ApiService } from '../../shared/services/api.service';
-import { StoreService } from '../../stores/store.service';
+import { Component, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
+import { ActivatedRoute, Router } from '@angular/router';
+import { UndoService } from '../../shared/components/undo.service';
+import {
+  DEMO_BODY,
+  DEMO_PLAN_MENU_ID,
+  DEMO_TARGETS,
+} from '../../shared/data/demo-data';
+import { STARTER_MENUS } from '../../shared/data/starter-data';
+import {
+  SessionService,
+  authErrorMessage,
+} from '../../shared/services/session.service';
+import { UserDataService } from '../../shared/services/user-data.service';
+import { MenuPlanStore } from '../../stores/menu-plan.store';
+import { ProfileStore } from '../../stores/profile.store';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [MaterialModule, ReactiveFormsModule, CommonModule],
-  template: `
-    <div class="full-page-container">
-      <mat-card class="login-card">
-        <div class="app-title">Nub Cal</div>
-        <form
-          class="login-form"
-          [formGroup]="loginForm"
-          (ngSubmit)="onSubmit()"
-        >
-          <mat-form-field appearance="outline" class="form-field email">
-            <mat-label>Email</mat-label>
-            <input
-              matInput
-              placeholder="Enter your email"
-              formControlName="email"
-            />
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="form-field password">
-            <mat-label>Password</mat-label>
-            <input
-              matInput
-              type="password"
-              placeholder="Enter your password"
-              formControlName="password"
-            />
-          </mat-form-field>
-          <button mat-raised-button color="primary" class="full-width">
-            Login
-          </button>
-        </form>
-      </mat-card>
-    </div>
-  `,
-  styles: `
-    .full-page-container {
-      width: 100%;
-      height: 100%;
-      margin: 0 auto;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: var(--background-color);
-    }
-
-    .login-card {
-      width: 100%;
-      max-width: 400px;
-      padding: var(--space-lg);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .login-form {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      gap: var(--space-sm);
-    }
-
-    .form-field {
-      width: 100%;
-    }
-    .app-title {
-      font-size: 24px;
-      font-weight: 700;
-      text-align: center;
-      margin-bottom: var(--space-lg);
-      color: var(--c-black);
-    }
-  `,
+  imports: [FormsModule, MatIconModule],
+  templateUrl: './login.component.html',
+  styleUrls: ['./login.component.scss'],
 })
 export class LoginPage {
-  store = inject(StoreService);
-  service = inject(ApiService);
-  formBuilder = inject(FormBuilder);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private undo = inject(UndoService);
+  private profile = inject(ProfileStore);
+  private data = inject(UserDataService);
+  private plan = inject(MenuPlanStore);
+  session = inject(SessionService);
 
-  constructor() {}
+  email = '';
+  password = '';
+  show = signal(false);
+  loading = signal<'' | 'login' | 'reset' | 'demo'>('');
+  error = signal('');
 
-  loginForm = this.formBuilder.group({
-    email: [''],
-    password: [''],
-  });
-
-  onSubmit() {
-    const formValue = this.loginForm.value;
-    console.log('Form submitted:', formValue);
-
-    const email = formValue.email;
-    const password = formValue.password;
-    if (email && password) {
-      this.store.auth.login(email, password);
+  async submit() {
+    if (this.loading()) return;
+    if (!this.email.trim() || !this.password) {
+      this.error.set('Enter your email and password.');
+      return;
     }
+    this.loading.set('login');
+    this.error.set('');
+    try {
+      await this.session.signIn(this.email.trim(), this.password);
+      const p = await this.profile.whenLoaded();
+      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+      // Accounts from before onboarding existed finish setup once.
+      await this.router.navigateByUrl(
+        p && !p.onboarded ? '/welcome' : returnUrl || '/today'
+      );
+    } catch (e) {
+      this.error.set(authErrorMessage(e));
+    } finally {
+      this.loading.set('');
+    }
+  }
+
+  async forgot() {
+    const email = this.email.trim();
+    if (!email) {
+      this.error.set('Enter your email first, then tap "Forgot password?"');
+      return;
+    }
+    this.loading.set('reset');
+    try {
+      await this.session.resetPassword(email);
+      this.undo.notify(`Reset link sent to ${email}`);
+      this.error.set('');
+    } catch (e) {
+      this.error.set(authErrorMessage(e));
+    } finally {
+      this.loading.set('');
+    }
+  }
+
+  /** Anonymous account pre-filled with sample data; no setup needed. */
+  async tryDemo() {
+    if (this.loading()) return;
+    this.loading.set('demo');
+    this.error.set('');
+    try {
+      await this.session.guest();
+      await this.data.seedDemo();
+      await this.profile.update({
+        onboarded: true,
+        demo: true,
+        targets: DEMO_TARGETS,
+        body: DEMO_BODY,
+      });
+      const dinner = STARTER_MENUS.find(m => m.id === DEMO_PLAN_MENU_ID);
+      const uid = this.session.uid();
+      if (dinner && uid) this.plan.seedPlan(uid, [dinner]);
+      await this.router.navigate(['/today']);
+    } catch (e) {
+      this.error.set(authErrorMessage(e));
+    } finally {
+      this.loading.set('');
+    }
+  }
+
+  getStarted() {
+    this.router.navigate(['/welcome']);
+  }
+
+  continueSetup() {
+    this.router.navigate(['/welcome']);
+  }
+
+  async logout() {
+    await this.session.logout();
   }
 }
