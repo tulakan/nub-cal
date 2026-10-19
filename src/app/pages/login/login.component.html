@@ -5,6 +5,14 @@
     <div class="tag">Count calories, plan meals and track progress.</div>
   </div>
 
+  @if (demoRoute && !error()) {
+    <!-- /demo: progress instead of the login form; falls back to the form on error -->
+    <div class="demo-loading" role="status" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="d-title">Setting up the demo</div>
+      <div class="d-step">{{ demoStep() || 'Starting…' }}</div>
+    </div>
+  } @else {
   <!-- The demo signs in as a guest before seeding; keep the form up until it navigates. -->
   @if (loading() !== 'demo' && session.user(); as u) {
     <!-- Signed in but setup not finished (e.g. account from the previous version) -->
@@ -97,8 +105,9 @@
         [disabled]="!!loading()"
         (click)="tryDemo()"
       >
-        {{ loading() === 'demo' ? 'Loading demo…' : 'Just looking? Try the demo' }}
+        {{ loading() === 'demo' ? (demoStep() || 'Loading demo…') : 'Just looking? Try the demo' }}
       </button>
     </div>
+  }
   }
 </div>

@@ -4,6 +4,7 @@ import {
   CollectionReference,
   DocumentReference,
   Timestamp,
+  WriteBatch,
   collection,
   deleteDoc,
   doc,
@@ -59,6 +60,11 @@ export class UserDataService {
   /** Starter foods + sample menus so a new user can try every feature. */
   async seedStarter() {
     const batch = writeBatch(this.db);
+    this.addStarter(batch);
+    await batch.commit();
+  }
+
+  private addStarter(batch: WriteBatch) {
     const now = Date.now();
     for (const f of STARTER_FOODS) {
       const { id, ...data } = f;
@@ -68,12 +74,15 @@ export class UserDataService {
       const { id, ...data } = m;
       batch.set(this.docRef('menus', id), { ...data, updatedAt: now });
     }
-    await batch.commit();
   }
 
-  /** Starter library + today's log + 3 months of progress, for demo mode. */
+  /**
+   * Starter library + today's log + 3 months of progress, for demo mode.
+   * One batch, so the demo waits on a single server round trip.
+   */
   async seedDemo() {
-    await this.seedStarter();
+    const batch = writeBatch(this.db);
+    this.addStarter(batch);
     const foods = new Map(STARTER_FOODS.map(f => [f.id, f]));
     const now = Date.now();
     const groups = new Map<string, string>();
@@ -97,7 +106,6 @@ export class UserDataService {
       return item;
     });
 
-    const batch = writeBatch(this.db);
     batch.set(this.docRef('logs', localDateKey()), {
       items: JSON.parse(JSON.stringify(items)),
       updatedAt: now,

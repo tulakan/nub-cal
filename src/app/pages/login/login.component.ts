@@ -38,10 +38,14 @@ export class LoginPage {
   show = signal(false);
   loading = signal<'' | 'login' | 'reset' | 'demo'>('');
   error = signal('');
+  /** Progress text while the demo account is being set up. */
+  demoStep = signal('');
+  /** Opened via /demo: show a loader instead of the login form. */
+  readonly demoRoute = !!this.route.snapshot.data['demo'];
 
   ngOnInit() {
     // /demo: start the demo right away, but never replace a signed-in session
-    if (this.route.snapshot.data['demo'] && !this.session.user()) {
+    if (this.demoRoute && !this.session.user()) {
       this.tryDemo();
     }
   }
@@ -93,22 +97,31 @@ export class LoginPage {
     this.loading.set('demo');
     this.error.set('');
     try {
+      this.demoStep.set('Creating a guest account…');
       await this.session.guest();
-      await this.data.seedDemo();
-      await this.profile.update({
-        onboarded: true,
-        demo: true,
-        targets: DEMO_TARGETS,
-        body: DEMO_BODY,
-      });
+      this.demoStep.set('Adding sample data…');
+      // Firestore applies writes to the local cache at once and syncs them in the
+      // background (retrying when offline), so don't hold the demo on the server ack.
+      // The profile is updated in memory synchronously, so the guards see it.
+      Promise.all([
+        this.data.seedDemo(),
+        this.profile.update({
+          onboarded: true,
+          demo: true,
+          targets: DEMO_TARGETS,
+          body: DEMO_BODY,
+        }),
+      ]).catch(e => console.error('demo seed failed', e));
       const dinner = STARTER_MENUS.find(m => m.id === DEMO_PLAN_MENU_ID);
       const uid = this.session.uid();
       if (dinner && uid) this.plan.seedPlan(uid, [dinner]);
+      this.demoStep.set('Opening the app…');
       await this.router.navigate(['/today']);
     } catch (e) {
       this.error.set(authErrorMessage(e));
     } finally {
       this.loading.set('');
+      this.demoStep.set('');
     }
   }
 

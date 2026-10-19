@@ -18,8 +18,9 @@ import { filter, first } from 'rxjs';
   template: `
     @if (!started()) {
       <!-- shown while guards restore the Firebase session -->
-      <div class="splash" aria-label="Loading">
+      <div class="splash" role="status" aria-label="Loading">
         <div class="logo"><span class="material-icons">eco</span></div>
+        <div class="label">Loading…</div>
       </div>
     }
     <router-outlet></router-outlet>
@@ -29,9 +30,15 @@ import { filter, first } from 'rxjs';
       position: fixed;
       inset: 0;
       display: flex;
+      flex-direction: column;
+      gap: 16px;
       align-items: center;
       justify-content: center;
       background: var(--c-white);
+    }
+    .label {
+      font-size: 14px;
+      color: var(--c-gray-600);
     }
     .logo {
       width: 72px;
