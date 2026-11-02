@@ -8,10 +8,15 @@
           [foods]="store.foods()"
           [recent]="recent"
           (pick)="selectFood($event)"
+          (create)="startCreate($event)"
         />
       } @else {
         <app-menu-picker (pick)="selectMenu($event)" />
       }
+    }
+
+    @case ('create') {
+      <app-food-form #form [initialName]="newName()" [autofocus]="true" />
     }
 
     @case ('qty') {
@@ -77,6 +82,18 @@
     }
   }
 
+  @if (step() === 'create') {
+    <div sheetFooter>
+      <button
+        type="button"
+        class="nub-btn"
+        [disabled]="creating()"
+        (click)="createFood()"
+      >
+        Save &amp; continue
+      </button>
+    </div>
+  }
   @if (step() === 'qty') {
     <div sheetFooter>
       <button

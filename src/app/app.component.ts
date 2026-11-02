@@ -10,6 +10,7 @@ import {
 import { SwUpdate } from '@angular/service-worker';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { filter, first } from 'rxjs';
+import { KeyboardService } from './shared/services/keyboard.service';
 
 @Component({
   selector: 'app-root',
@@ -66,6 +67,7 @@ export class AppComponent {
   started = signal(false);
 
   constructor() {
+    inject(KeyboardService).start();
     inject(Router)
       .events.pipe(
         filter(

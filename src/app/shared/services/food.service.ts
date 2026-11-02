@@ -31,6 +31,12 @@ export class FoodService {
     return addDoc(this.data.col('foods'), food);
   }
 
+  /** Adds a food and returns it with its new id. */
+  async createFood(food: Omit<Food, 'id'>): Promise<Food> {
+    const ref = await this.addFood(food);
+    return { ...food, id: ref.id };
+  }
+
   updateFood(id: string, food: Partial<Food>) {
     const { id: _id, ...rest } = food;
     return setDoc(this.data.docRef('foods', id), rest, { merge: true });

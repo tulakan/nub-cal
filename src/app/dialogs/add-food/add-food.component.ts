@@ -1,7 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { MatBottomSheetRef } from '@angular/material/bottom-sheet';
 import { FoodLogStore } from '../../stores/food-log.store';
 import { MenuPlanStore } from '../../stores/menu-plan.store';
+import { FoodFormComponent } from '../../shared/components/food-form.component';
+import { FoodService } from '../../shared/services/food.service';
 import { FoodPickerComponent } from '../../shared/components/food-picker.component';
 import { MacroSummaryComponent } from '../../shared/components/macro-summary.component';
 import { MenuPickerComponent } from '../../shared/components/menu-picker.component';
@@ -20,7 +22,7 @@ import {
   ingredientsNutrition,
 } from '../../shared/utils/nutrition';
 
-type Step = 'pick' | 'qty' | 'menu';
+type Step = 'pick' | 'qty' | 'menu' | 'create';
 
 @Component({
   selector: 'app-add-food',
@@ -30,6 +32,7 @@ type Step = 'pick' | 'qty' | 'menu';
     SegmentedComponent,
     ChipsComponent,
     FoodPickerComponent,
+    FoodFormComponent,
     MenuPickerComponent,
     QtyInputComponent,
     MacroSummaryComponent,
@@ -42,6 +45,7 @@ type Step = 'pick' | 'qty' | 'menu';
 export class AddFoodComponent {
   private ref = inject(MatBottomSheetRef<AddFoodComponent>);
   private undo = inject(UndoService);
+  private foods = inject(FoodService);
   log = inject(FoodLogStore);
   store = inject(MenuPlanStore);
 
@@ -58,6 +62,9 @@ export class AddFoodComponent {
   tab = signal('foods');
   food = signal<Food | null>(null);
   qty = signal(0);
+  newName = signal('');
+  form = viewChild<FoodFormComponent>('form');
+  creating = signal(false);
 
   menu = signal<Menu | null>(null);
   menuScale = signal(1);
@@ -67,6 +74,7 @@ export class AddFoodComponent {
 
   title = computed(() => {
     if (this.step() === 'qty') return this.food()?.name ?? 'Add food';
+    if (this.step() === 'create') return 'New food';
     if (this.step() === 'menu') return this.menu()?.name ?? 'Add menu';
     return 'Add to today';
   });
@@ -93,6 +101,25 @@ export class AddFoodComponent {
     this.food.set(f);
     this.qty.set(f.servingSize);
     this.step.set('qty');
+  }
+
+  startCreate(name: string) {
+    this.newName.set(name);
+    this.step.set('create');
+  }
+
+  async createFood() {
+    const data = this.form()?.submit();
+    if (!data) return;
+    this.creating.set(true);
+    try {
+      this.selectFood(await this.foods.createFood(data));
+    } catch (e) {
+      console.error(e);
+      this.undo.notify('Could not save. Please try again.');
+    } finally {
+      this.creating.set(false);
+    }
   }
 
   selectMenu(m: Menu) {

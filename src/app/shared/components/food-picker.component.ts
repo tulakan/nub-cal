@@ -68,10 +68,18 @@ const norm = (s: string) =>
       />
     }
 
+    @if (query().trim(); as q) {
+      <button type="button" class="row create" (click)="create.emit(q)">
+        <span class="name"
+          ><mat-icon>add</mat-icon> Add "{{ q }}" as a new food</span
+        >
+      </button>
+    }
+
     @if (more() > 0) {
       <div class="more">{{ more() }} more — keep typing to narrow</div>
     }
-    @if (!shown().length) {
+    @if (!shown().length && !query().trim()) {
       <app-empty-state
         icon="search_off"
         [title]="query() ? 'No foods found' : 'No foods yet'"
@@ -158,6 +166,12 @@ const norm = (s: string) =>
       font-size: var(--fs-body-sm);
       color: var(--c-gray-600);
     }
+    .create .name {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      color: var(--c-primary-ink);
+    }
     .more {
       text-align: center;
       font-size: var(--fs-body-sm);
@@ -171,6 +185,8 @@ export class FoodPickerComponent implements AfterViewInit {
   recent = input<Food[]>([]);
   autofocus = input(true);
   pick = output<Food>();
+  /** Emits the search text when the user wants to add it as a new food. */
+  create = output<string>();
 
   query = signal('');
   private input = viewChild<ElementRef<HTMLInputElement>>('q');
@@ -187,6 +203,8 @@ export class FoodPickerComponent implements AfterViewInit {
   more = computed(() => Math.max(0, this.matches().length - this.LIMIT));
 
   ngAfterViewInit() {
-    if (this.autofocus()) setTimeout(() => this.input()?.nativeElement.focus(), 150);
+    // with recents on screen, keep the keyboard closed so they stay visible
+    if (this.autofocus() && !this.recent().length)
+      setTimeout(() => this.input()?.nativeElement.focus(), 150);
   }
 }

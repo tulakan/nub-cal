@@ -429,8 +429,22 @@ body {
   min-width: 0;
   max-width: var(--app-w);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  max-height: calc(100dvh - var(--safe-top) - 24px);
+  max-height: calc(100dvh - var(--safe-top) - 24px - var(--kb-inset, 0px));
   overflow: hidden;
+}
+// iOS overlays the keyboard instead of resizing: lift the sheet by its height
+.nub-sheet {
+  margin-bottom: var(--kb-inset, 0px);
+}
+
+// Keyboard open: hide chrome that would otherwise float above it
+html.kb-open {
+  .nav,
+  .nub-fab,
+  .bar,
+  .totals {
+    display: none;
+  }
 }
 
 // Snackbar: black, above the bottom nav

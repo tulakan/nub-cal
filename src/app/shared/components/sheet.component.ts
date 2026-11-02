@@ -45,8 +45,11 @@ import { MatIconModule } from '@angular/material/icon';
     .sheet {
       display: flex;
       flex-direction: column;
-      max-height: calc(100dvh - var(--safe-top) - 24px);
+      max-height: calc(100dvh - var(--safe-top) - 24px - var(--kb-inset, 0px));
       padding-bottom: var(--safe-bottom);
+    }
+    :host-context(html.kb-open) .sheet {
+      padding-bottom: 0;
     }
     .grabber {
       width: 32px;
