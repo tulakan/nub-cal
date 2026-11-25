@@ -1,9 +1,9 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { ProfileStore } from '../../stores/profile.store';
 import { ConfirmService } from '../components/confirm-dialog.component';
 import { UndoService } from '../components/undo.service';
+import { clearLocalUserData } from '../utils/local-data';
 import { SessionService } from './session.service';
 import { UserDataService } from './user-data.service';
 
@@ -17,7 +17,6 @@ export class DemoService {
   private profile = inject(ProfileStore);
   private router = inject(Router);
   private undo = inject(UndoService);
-  private snack = inject(MatSnackBar);
 
   readonly exiting = signal(false);
 
@@ -27,19 +26,29 @@ export class DemoService {
     const ok = await this.confirm.ask({
       title: 'Exit demo?',
       message:
-        'The sample data will be deleted. Create an account in Settings first if you want to keep it.',
+        'The sample data will be deleted. Create an account in Settings first to keep the sample foods and menus.',
       confirmLabel: 'Exit demo',
       destructive: true,
     });
     if (!ok) return;
 
     this.exiting.set(true);
-    const progress = this.snack.open('Closing demo…', undefined, {
-      duration: 0,
-    });
+    this.profile.detach();
+    // Cleanup runs in the background so leaving feels instant. Order matters:
+    // it must read the account before release() clears it.
+    this.session.holdAuth(this.cleanUp());
+    this.session.release();
+    await this.router.navigate(['/login']);
+    this.exiting.set(false);
+    this.undo.notify('Demo closed');
+  }
+
+  private async cleanUp() {
+    // read before the first await: the app signs out while this runs
+    const uid = this.session.uid();
+    if (uid) clearLocalUserData(uid);
     try {
-      this.profile.detach();
-      // Never keep the user waiting on cleanup; leftovers belong to a dead anonymous account.
+      // Never block the next sign-in for long; leftovers belong to a dead anonymous account.
       await Promise.race([
         this.data.deleteAccountAndData(),
         new Promise(resolve => setTimeout(resolve, CLEANUP_TIMEOUT_MS)),
@@ -48,9 +57,5 @@ export class DemoService {
       console.error('demo cleanup failed', e);
     }
     await this.session.logout().catch(() => {});
-    progress.dismiss();
-    await this.router.navigate(['/login']);
-    this.exiting.set(false);
-    this.undo.notify('Demo closed');
   }
 }

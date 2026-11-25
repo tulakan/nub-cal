@@ -84,3 +84,18 @@
   justify-content: flex-start;
   padding: 0;
 }
+
+.del {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  margin: var(--space-sm) 0;
+  border: var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.del-text {
+  font-size: var(--fs-body-sm);
+  color: var(--c-negative-text);
+}

@@ -1,5 +1,5 @@
 import { Injectable, effect, inject, signal } from '@angular/core';
-import { Unsubscribe, onSnapshot, setDoc } from 'firebase/firestore';
+import { Unsubscribe, deleteField, onSnapshot, setDoc } from 'firebase/firestore';
 import { TargetMacros } from '../shared/interface/nutrition.interface';
 import { SessionService } from '../shared/services/session.service';
 import { UserDataService } from '../shared/services/user-data.service';
@@ -104,6 +104,22 @@ export class ProfileStore {
     if (this.loaded() && this.loadedFor === this.session.uid())
       return this.profile();
     return new Promise(resolve => this.waiters.push(resolve));
+  }
+
+  /** Removes optional fields (e.g. sample targets/body from the demo). */
+  async clearFields(...keys: ('targets' | 'body')[]) {
+    const uid = this.session.uid();
+    const p = this.profile();
+    if (uid && p) {
+      const next = { ...p };
+      keys.forEach(k => delete next[k]);
+      this.resolve(uid, next);
+    }
+    await setDoc(
+      this.data.profileRef(),
+      Object.fromEntries(keys.map(k => [k, deleteField()])),
+      { merge: true }
+    );
   }
 
   async update(patch: Partial<Profile>) {

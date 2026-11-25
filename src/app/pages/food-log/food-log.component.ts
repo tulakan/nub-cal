@@ -23,7 +23,7 @@ import { LoggedFood } from '../../shared/interface/nutrition.interface';
 import {
   KcalPipe,
   MacroPipe,
-  formatThaiDate,
+  formatDate,
 } from '../../shared/pipes/format.pipes';
 import { ShellService } from '../../shared/services/shell.service';
 import { Macros, sumNutrition } from '../../shared/utils/nutrition';
@@ -103,7 +103,7 @@ export class FoodLogPage implements OnInit, OnDestroy {
           onClick: () => this.openSettings(),
         },
       ],
-      formatThaiDate(new Date(), 'day')
+      formatDate(new Date(), 'day')
     );
     if (this.route.snapshot.queryParamMap.get('add')) {
       setTimeout(() => this.openAdd());
@@ -142,7 +142,7 @@ export class FoodLogPage implements OnInit, OnDestroy {
   toggle(key: string) {
     this.expanded.update(s => {
       const next = new Set(s);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (!next.delete(key)) next.add(key);
       return next;
     });
   }

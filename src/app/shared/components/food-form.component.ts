@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  OnInit,
   computed,
   input,
   signal,
@@ -187,7 +188,7 @@ const ALL_UNITS = [
     }
   `,
 })
-export class FoodFormComponent implements AfterViewInit {
+export class FoodFormComponent implements OnInit, AfterViewInit {
   food = input<Food | null>(null);
   initialName = input('');
   /** Focus the first empty field once the sheet has settled. */

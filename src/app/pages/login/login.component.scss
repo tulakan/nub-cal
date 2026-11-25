@@ -18,6 +18,20 @@
   }
 }
 
+/* Shown on laptop-sized screens only: the app is a phone-width layout */
+.wide-note {
+  display: none;
+  text-align: center;
+  font-size: var(--fs-body-sm);
+  color: var(--c-gray-600);
+}
+
+@media (min-width: 900px) {
+  .wide-note {
+    display: block;
+  }
+}
+
 /* Brand */
 
 .brand {

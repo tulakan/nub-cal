@@ -14,7 +14,7 @@ import {
   StatTileComponent,
 } from '../../shared/components/primitives';
 import { SheetService } from '../../shared/components/sheet.service';
-import { formatThaiDate } from '../../shared/pipes/format.pipes';
+import { formatDate } from '../../shared/pipes/format.pipes';
 import { BodyCompositionService } from '../../shared/services/body-composition.service';
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
@@ -146,7 +146,7 @@ export class ProgressPage implements OnInit {
     { value: 'measure', label: 'Measurements' },
   ];
   ranges = Object.keys(RANGE_DAYS).map(r => ({ value: r, label: r }));
-  formatDate = formatThaiDate;
+  formatDate = formatDate;
   tints = ['primary', 'protein', 'carb', 'fat', 'lilac', 'peach'] as const;
 
   kind = signal<Kind>('body');
@@ -208,14 +208,17 @@ export class ProgressPage implements OnInit {
         trigger: 'axis',
         confine: true,
         formatter: (p: any) =>
-          `${formatThaiDate(new Date(p[0].value[0]))}<br/>${m.label}: ${p[0].value[1]}${m.unit ? ' ' + m.unit : ''}`,
+          `${formatDate(new Date(p[0].value[0]))}<br/>${m.label}: ${p[0].value[1]}${m.unit ? ' ' + m.unit : ''}`,
       },
       xAxis: {
         type: 'time',
+        splitNumber: 4,
         axisLabel: {
           color: '#666',
           fontSize: 11,
-          formatter: (v: number) => formatThaiDate(new Date(v)).slice(0, -5),
+          formatter: (v: number) => formatDate(v, 'axis'),
+          // drop labels that would collide on narrow screens
+          hideOverlap: true,
         },
         axisLine: { lineStyle: { color: '#e0e0e0' } },
         splitLine: { show: false },

@@ -427,6 +427,8 @@ body {
 .nub-sheet .mat-bottom-sheet-container {
   padding: 0;
   min-width: 0;
+  // fixed width: otherwise the sheet shrinks to its content as the list changes
+  width: 100vw;
   max-width: var(--app-w);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   max-height: calc(100dvh - var(--safe-top) - 24px - var(--kb-inset, 0px));

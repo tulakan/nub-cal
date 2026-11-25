@@ -72,8 +72,9 @@
       @if (profile.profile()?.demo) {
         <div class="g-title">You're in demo mode</div>
         <div class="g-sub">
-          Everything here is sample data. Create an account to keep it and start
-          tracking for real, or exit the demo below.
+          Everything here is sample data. Create an account to start tracking for
+          real: the sample foods and menus stay as your starter library, while
+          the sample progress, today's log and targets are cleared.
         </div>
       } @else {
         <div class="g-title">You're using a guest account</div>
@@ -122,6 +123,55 @@
     <button type="button" class="nub-btn text danger left" (click)="logout()">
       Log out
     </button>
+  }
+
+  @if (!profile.profile()?.demo) {
+    @if (!deleteOpen()) {
+      <button
+        type="button"
+        class="nub-btn text danger left"
+        (click)="deleteOpen.set(true)"
+      >
+        Delete account
+      </button>
+    } @else {
+      <div class="del">
+        <div class="del-text">
+          This permanently deletes your account and all its data.
+        </div>
+        @if (!session.isGuest()) {
+          <input
+            class="nub-input"
+            type="password"
+            placeholder="Your password"
+            aria-label="Password, to confirm account deletion"
+            autocomplete="current-password"
+            [value]="deletePassword()"
+            (input)="deletePassword.set($any($event.target).value)"
+          />
+        }
+        @if (deleteError()) {
+          <div class="nub-error" role="alert">{{ deleteError() }}</div>
+        }
+        <button
+          type="button"
+          class="nub-btn text danger"
+          [disabled]="
+            checking() || (!session.isGuest() && !deletePassword())
+          "
+          (click)="deleteAccount()"
+        >
+          {{ checking() ? 'Checking…' : 'Delete my account and data' }}
+        </button>
+        <button
+          type="button"
+          class="nub-btn text"
+          (click)="deleteOpen.set(false)"
+        >
+          Cancel
+        </button>
+      </div>
+    }
   }
 
   @if (legacy()) {

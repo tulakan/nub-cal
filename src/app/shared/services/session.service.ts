@@ -5,6 +5,7 @@ import {
   createUserWithEmailAndPassword,
   linkWithCredential,
   onAuthStateChanged,
+  reauthenticateWithCredential,
   sendPasswordResetEmail,
   signInAnonymously,
   signInWithEmailAndPassword,
@@ -55,6 +56,21 @@ export class SessionService {
   /** Resolves once Firebase has restored (or not) the session. */
   readonly ready: Promise<User | null>;
 
+  /** Sign-ins wait for this, so they never overlap a background account cleanup. */
+  private settled: Promise<unknown> = Promise.resolve();
+
+  holdAuth(work: Promise<unknown>) {
+    this.settled = work.catch(() => {});
+  }
+
+  /**
+   * Treats the app as signed out right away, while Firebase keeps the session
+   * for cleanup that still needs its token.
+   */
+  release() {
+    this.user.set(null);
+  }
+
   constructor() {
     this.ready = new Promise(resolve => {
       onAuthStateChanged(this.auth, u => {
@@ -65,11 +81,13 @@ export class SessionService {
   }
 
   async signIn(email: string, password: string) {
+    await this.settled;
     const cred = await signInWithEmailAndPassword(this.auth, email, password);
     this.user.set(cred.user);
   }
 
   async signUp(email: string, password: string) {
+    await this.settled;
     const cred = await createUserWithEmailAndPassword(
       this.auth,
       email,
@@ -79,6 +97,7 @@ export class SessionService {
   }
 
   async guest() {
+    await this.settled;
     const cred = await signInAnonymously(this.auth);
     this.user.set(cred.user);
   }
@@ -90,6 +109,16 @@ export class SessionService {
     const cred = EmailAuthProvider.credential(email, password);
     const res = await linkWithCredential(u, cred);
     this.user.set(res.user);
+  }
+
+  /** Confirms the password of the signed-in email account. */
+  async reauthenticate(password: string) {
+    const u = this.auth.currentUser;
+    if (!u?.email) throw new Error('No email account');
+    await reauthenticateWithCredential(
+      u,
+      EmailAuthProvider.credential(u.email, password)
+    );
   }
 
   async resetPassword(email: string) {

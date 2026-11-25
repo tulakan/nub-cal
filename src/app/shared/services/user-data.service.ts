@@ -76,6 +76,21 @@ export class UserDataService {
     }
   }
 
+  /** Deletes every body-composition and circumference entry (demo sample progress). */
+  async clearProgress() {
+    const snaps = await Promise.all(
+      (['body_composition', 'circumference'] as const).map(c =>
+        getDocs(this.col(c))
+      )
+    );
+    const refs = snaps.flatMap(s => s.docs.map(d => d.ref));
+    for (let i = 0; i < refs.length; i += 400) {
+      const batch = writeBatch(this.db);
+      refs.slice(i, i + 400).forEach(r => batch.delete(r));
+      await batch.commit();
+    }
+  }
+
   /**
    * Starter library + today's log + 3 months of progress, for demo mode.
    * One batch, so the demo waits on a single server round trip.
@@ -127,6 +142,9 @@ export class UserDataService {
 
   /** Deletes all of this account's data (in parallel) and the account itself. */
   async deleteAccountAndData() {
+    // read the account before the first await: the app may sign out meanwhile
+    const profile = this.profileRef();
+    const user = this.firebase.auth.currentUser;
     const cols: UserCollection[] = [
       'foods',
       'menus',
@@ -142,9 +160,9 @@ export class UserDataService {
       refs.slice(i, i + 400).forEach(r => batch.delete(r));
       batches.push(batch.commit());
     }
-    await Promise.all([...batches, deleteDoc(this.profileRef())]);
-    const u = this.firebase.auth.currentUser;
-    if (u) await deleteUser(u);
+    await Promise.all([...batches, deleteDoc(profile)]);
+    // deleteUser signs out whoever is current, so never run it for a stale account
+    if (user && this.firebase.auth.currentUser === user) await deleteUser(user);
   }
 
   /**

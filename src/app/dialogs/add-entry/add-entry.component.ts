@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { MAT_BOTTOM_SHEET_DATA, MatBottomSheetRef } from '@angular/material/bottom-sheet';
 import { SheetComponent } from '../../shared/components/sheet.component';
 import { UndoService } from '../../shared/components/undo.service';
-import { formatThaiDate } from '../../shared/pipes/format.pipes';
+import { formatDate } from '../../shared/pipes/format.pipes';
 import { BodyCompositionService } from '../../shared/services/body-composition.service';
 import { localDateKey } from '../../shared/utils/date-key';
 
@@ -114,7 +114,7 @@ export class AddEntryComponent {
   );
 
   prefillNote = computed(() =>
-    this.data.last?.['ts'] ? `Prefilled from ${formatThaiDate(this.data.last['ts'])}` : ''
+    this.data.last?.['ts'] ? `Prefilled from ${formatDate(this.data.last['ts'])}` : ''
   );
 
   set(key: string, raw: string) {

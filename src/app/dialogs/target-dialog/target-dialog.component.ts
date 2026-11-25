@@ -8,6 +8,7 @@ import { GuideSheetComponent } from '../../shared/components/guide.component';
 import { SheetComponent } from '../../shared/components/sheet.component';
 import { SheetService } from '../../shared/components/sheet.service';
 import { UndoService } from '../../shared/components/undo.service';
+import { AccountService } from '../../shared/services/account.service';
 import { DemoService } from '../../shared/services/demo.service';
 import {
   SessionService,
@@ -15,6 +16,7 @@ import {
 } from '../../shared/services/session.service';
 import { UserDataService } from '../../shared/services/user-data.service';
 import { FoodLogStore } from '../../stores/food-log.store';
+import { MenuPlanStore } from '../../stores/menu-plan.store';
 import { ProfileStore } from '../../stores/profile.store';
 
 /** Settings sheet: daily targets, help, account, data, about. */
@@ -35,7 +37,9 @@ export class TargetDialogComponent implements OnInit {
   session = inject(SessionService);
   log = inject(FoodLogStore);
   profile = inject(ProfileStore);
+  private plan = inject(MenuPlanStore);
   private demo = inject(DemoService);
+  private account = inject(AccountService);
 
   kcal = signal(this.log.targets().kcal);
   protein = signal(this.log.targets().protein);
@@ -49,6 +53,12 @@ export class TargetDialogComponent implements OnInit {
   newPassword = signal('');
   upgrading = signal(false);
   upgradeError = signal('');
+
+  // delete account
+  deleteOpen = signal(false);
+  deletePassword = signal('');
+  deleteError = signal('');
+  checking = signal(false);
 
   legacy = signal(false);
   importing = signal(false);
@@ -114,13 +124,29 @@ export class TargetDialogComponent implements OnInit {
     this.upgrading.set(true);
     this.upgradeError.set('');
     try {
+      const wasDemo = !!this.profile.profile()?.demo;
       await this.session.upgradeGuest(
         this.newEmail().trim(),
         this.newPassword()
       );
-      if (this.profile.profile()?.demo)
+      if (wasDemo) {
+        // Sample foods and menus stay as a starter library; made-up progress,
+        // today's log, the plan and targets must not become the user's real data.
+        this.log.clear();
+        this.plan.clearPlan();
+        await Promise.all([
+          this.data.clearProgress(),
+          this.profile.clearFields('targets', 'body'),
+        ]);
         await this.profile.update({ demo: false });
-      this.undo.notify('Account created. Your data is saved.');
+        this.undo.notify('Account created. Sample data cleared.');
+        this.ref.dismiss();
+        await this.router.navigate(['/welcome'], {
+          queryParams: { mode: 'targets' },
+        });
+      } else {
+        this.undo.notify('Account created. Your data is saved.');
+      }
     } catch (e) {
       this.upgradeError.set(authErrorMessage(e));
     } finally {
@@ -148,6 +174,36 @@ export class TargetDialogComponent implements OnInit {
     } finally {
       this.importing.set(false);
     }
+  }
+
+  async deleteAccount() {
+    if (this.checking()) return;
+    this.deleteError.set('');
+    if (!navigator.onLine) {
+      this.deleteError.set(authErrorMessage({ code: 'auth/network-request-failed' }));
+      return;
+    }
+    this.checking.set(true);
+    try {
+      // check the password first: nothing is deleted if it is wrong
+      if (!this.session.isGuest())
+        await this.session.reauthenticate(this.deletePassword());
+    } catch (e) {
+      this.deleteError.set(authErrorMessage(e));
+      this.checking.set(false);
+      return;
+    }
+    const ok = await this.confirm.ask({
+      title: 'Delete account and all data?',
+      message:
+        'Foods, menus, food logs and progress entries are deleted permanently. This cannot be undone.',
+      confirmLabel: 'Delete forever',
+      destructive: true,
+    });
+    this.checking.set(false);
+    if (!ok) return;
+    this.ref.dismiss();
+    await this.account.deleteAccount();
   }
 
   async exitDemo() {

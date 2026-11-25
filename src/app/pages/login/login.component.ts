@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -24,7 +24,7 @@ import { ProfileStore } from '../../stores/profile.store';
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
 })
-export class LoginPage {
+export class LoginPage implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private undo = inject(UndoService);
@@ -44,10 +44,19 @@ export class LoginPage {
   readonly demoRoute = !!this.route.snapshot.data['demo'];
 
   ngOnInit() {
+    this.preloadApp();
     // /demo: start the demo right away, but never replace a signed-in session
     if (this.demoRoute && !this.session.user()) {
       this.tryDemo();
     }
+  }
+
+  /** Fetch the app's first screen while signing in, not after it. */
+  private preloadApp() {
+    Promise.all([
+      import('../../layout/main/main.component'),
+      import('../food-log/food-log.component'),
+    ]).catch(() => {});
   }
 
   async submit() {
