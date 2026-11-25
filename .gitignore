@@ -40,3 +40,10 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Build output and deploy cache: built by `pnpm run deploy`, not committed
+/public
+/.firebase
+
+# Local tool settings
+/.claude

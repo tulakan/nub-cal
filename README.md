@@ -44,9 +44,20 @@ pnpm install
 pnpm start          # http://localhost:4203
 ```
 
+## Checks
+
+```bash
+pnpm lint
+pnpm test:ci        # Karma + Jasmine in headless Chrome
+```
+
+GitHub Actions runs lint, tests and a production build on every push and pull request.
+
 ## Build and deploy
 
 ```bash
-pnpm build          # outputs to public/
-firebase deploy     # hosting + Firestore and Realtime Database rules
+pnpm build          # outputs to public/ (not committed)
+pnpm run deploy     # builds, then deploys hosting only
 ```
+
+Security rules are deployed separately (`npx firebase-tools deploy --only firestore:rules,database`), so a UI release never changes data access by accident.

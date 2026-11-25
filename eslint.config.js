@@ -1,49 +1,48 @@
 // @ts-check
 const eslint = require('@eslint/js');
 const tseslint = require('typescript-eslint');
-const angular = require('@angular-eslint/eslint-plugin');
-const angularTemplate = require('@angular-eslint/eslint-plugin-template');
+const angular = require('angular-eslint');
 
 module.exports = tseslint.config(
   {
-    files: ['**/*.ts'],
+    files: ['src/**/*.ts'],
     extends: [
       eslint.configs.recommended,
       ...tseslint.configs.recommended,
       ...tseslint.configs.stylistic,
+      ...angular.configs.tsRecommended,
     ],
     processor: angular.processInlineTemplates,
     rules: {
       '@angular-eslint/directive-selector': [
         'error',
-        {
-          type: 'attribute',
-          prefix: 'app',
-          style: 'camelCase',
-        },
+        { type: 'attribute', prefix: 'app', style: 'camelCase' },
       ],
       '@angular-eslint/component-selector': [
         'error',
-        {
-          type: 'element',
-          prefix: 'app',
-          style: 'kebab-case',
-        },
+        { type: 'element', prefix: 'app', style: 'kebab-case' },
       ],
-      // Disable rules that conflict with Prettier
-      '@typescript-eslint/indent': 'off',
-      '@typescript-eslint/quotes': 'off',
-      '@typescript-eslint/semi': 'off',
-      '@typescript-eslint/comma-dangle': 'off',
-      '@typescript-eslint/member-delimiter-style': 'off',
+      // route components are named *Page
+      '@angular-eslint/component-class-suffix': [
+        'error',
+        { suffixes: ['Component', 'Page'] },
+      ],
+      // best-effort work (storage, fire-and-forget saves) ignores errors on purpose
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      '@typescript-eslint/no-empty-function': 'off',
+      // `const { id: _id, ...rest } = x` drops a field
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { varsIgnorePattern: '^_', argsIgnorePattern: '^_' },
+      ],
+      '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
   {
-    files: ['**/*.html'],
+    files: ['src/**/*.html'],
     extends: [
-      ...angularTemplate.configs.recommended,
-      ...angularTemplate.configs.accessibility,
+      ...angular.configs.templateRecommended,
+      ...angular.configs.templateAccessibility,
     ],
-    rules: {},
   }
 );

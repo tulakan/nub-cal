@@ -1,7 +1,8 @@
+# pnpm only runs install scripts for packages listed as true
 allowBuilds:
-  '@firebase/util': set this to true or false
-  esbuild: set this to true or false
-  lmdb: set this to true or false
-  msgpackr-extract: set this to true or false
-  nice-napi: set this to true or false
-  protobufjs: set this to true or false
+  '@firebase/util': false
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: true
+  nice-napi: true
+  protobufjs: false
